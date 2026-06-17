@@ -72,6 +72,7 @@
 html, body {
   height: 100%;
   overflow: hidden;
+  touch-action: none; /* prevents pinch-zoom; user-scalable=no is ignored by iOS 10+ */
   background: var(--bg);
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   color: var(--given-color);

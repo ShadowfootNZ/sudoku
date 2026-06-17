@@ -14,7 +14,6 @@ function handleCellSelect(e) {
   const cell = e.target.closest('[data-cell]');
   if (!cell) return;
   state.selectCell(parseInt(cell.dataset.cell, 10));
-  focusScribble();
 }
 
 function applyDigit(digit) {
@@ -37,6 +36,7 @@ export function initInput() {
       penActive = true;
       clearTimeout(penTimer);
       handleCellSelect(e);
+      focusScribble(); // only pen input uses Scribble — keeps keyboard off for finger taps
     } else if (e.pointerType === 'touch') {
       if (!penActive) handleCellSelect(e);
       // else: palm — ignore
