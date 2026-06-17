@@ -2,9 +2,10 @@
 
 import state from './state.js';
 
-let penActive         = false;
-let penTimer          = null;
+let penActive          = false;
+let penTimer           = null;
 let touchDebounceTimer = null;
+let scribbleCell       = -1; // cell index currently under the scribble input
 
 // Position the hidden Scribble input over a grid cell so iPadOS Scribble
 // activates at the right place on screen, then focus it.
@@ -17,6 +18,7 @@ function focusScribble(cellEl) {
     scribble.style.top    = r.top    + 'px';
     scribble.style.width  = r.width  + 'px';
     scribble.style.height = r.height + 'px';
+    scribbleCell = parseInt(cellEl.dataset.cell, 10);
   }
   scribble.focus({ preventScroll: true });
 }
@@ -95,16 +97,30 @@ export function initInput() {
   const scribble = document.getElementById('scribble-input');
 
   scribble.addEventListener('input', () => {
+    // Scribble may suppress pointerdown (intercepting the gesture), so the cell
+    // might not be selected yet. Ensure the cell under the scribble input is selected.
+    if (scribbleCell !== -1 && state.selected !== scribbleCell) state.selectCell(scribbleCell);
+
     const raw = scribble.value;
     scribble.value = '';
-    // Scribble may deliver multi-char strings; take the last digit character
+    if (!raw) return;
+
     const digits = raw.replace(/\D/g, '');
-    if (!digits) return;
+    if (!digits) {
+      // Non-digit gesture (unrecognized cross-out, slash, etc.) → erase the cell.
+      // Note: cross-out strokes are often misread as "1" by Scribble OCR — for reliable
+      // deletion use the iPadOS scratch-out gesture (rapid zigzag), which sends Backspace.
+      if (state.selected !== -1) state.clearCell(state.selected);
+      return;
+    }
     const d = parseInt(digits[digits.length - 1], 10);
     if (d >= 1 && d <= 9) applyDigit(d);
   });
 
   scribble.addEventListener('keydown', e => {
+    // Ensure correct cell is selected (same pointerdown-suppression guard as above)
+    if (scribbleCell !== -1 && state.selected !== scribbleCell) state.selectCell(scribbleCell);
+
     if (e.key === 'Backspace' || e.key === 'Delete') {
       e.preventDefault();
       if (state.selected !== -1) state.clearCell(state.selected);
