@@ -2,38 +2,30 @@
 
 import state from './state.js';
 import {
-  buildGrid, renderAll, renderCell, renderPeersOf,
+  buildGrid, renderAll, renderPeersOf,
   updateHintsDisplay, setNotesModeUI, setConflictUI,
   showLoading, showComplete, showResume, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
-
-let activeWorker = null;
+import { generateComplete, createPuzzle } from './generator.js';
 
 function startNewGame(difficulty) {
   hideOverlay();
   showLoading(true);
-  if (activeWorker) { activeWorker.terminate(); activeWorker = null; }
 
-  const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
-  activeWorker = worker;
-
-  worker.onmessage = ({ data: { puzzle, solution } }) => {
-    activeWorker = null;
-    state.newGame(puzzle, solution, difficulty);
-    showLoading(false);
-    buildGrid();
-    updateHintsDisplay();
-    setNotesModeUI(state.notesMode);
-    setConflictUI(state.conflictCheck);
-  };
-
-  worker.onerror = err => {
-    console.error('Worker error:', err);
-    showLoading(false);
-  };
-
-  worker.postMessage({ difficulty });
+  // Double rAF ensures the loading screen is painted before generation blocks the thread
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const solution = generateComplete();
+      const puzzle   = createPuzzle(solution, difficulty);
+      state.newGame(puzzle, solution, difficulty);
+      showLoading(false);
+      buildGrid();
+      updateHintsDisplay();
+      setNotesModeUI(state.notesMode);
+      setConflictUI(state.conflictCheck);
+    });
+  });
 }
 
 function init() {
