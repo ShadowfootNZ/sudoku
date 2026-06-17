@@ -91,6 +91,18 @@ export function renderPeersOf(cell) {
   }
 }
 
+export function updateNumpad() {
+  const s = state.raw;
+  const counts = new Array(10).fill(0);
+  for (let i = 0; i < 81; i++) {
+    const v = s.given[i] || s.answer[i];
+    if (v) counts[v]++;
+  }
+  document.querySelectorAll('.num-btn[data-digit]').forEach(btn => {
+    btn.disabled = counts[parseInt(btn.dataset.digit, 10)] >= 9;
+  });
+}
+
 export function updateHintsDisplay() {
   const el = document.getElementById('hints-display');
   if (el) el.textContent = `Hints: ${state.hintsUsed}`;

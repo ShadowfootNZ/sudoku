@@ -225,6 +225,7 @@ html, body {
 .digit {
   font-size: clamp(14px, 5vmin, 32px);
   font-weight: 600;
+  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', cursive;
   line-height: 1;
   pointer-events: none;
 }
@@ -250,8 +251,9 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(6px, 1.2vmin, 10px);
+  font-size: clamp(9px, 2vmin, 14px);
   font-weight: 500;
+  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', cursive;
   color: var(--note-color);
   line-height: 1;
 }
@@ -328,6 +330,12 @@ html, body {
 .num-btn:active {
   background: var(--accent);
   transform: scale(0.93);
+}
+
+.num-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
 }
 
 #delete-btn {

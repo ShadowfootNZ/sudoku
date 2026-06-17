@@ -3,7 +3,7 @@
 import state from './state.js';
 import {
   buildGrid, renderAll, renderPeersOf,
-  updateHintsDisplay, setNotesModeUI, setConflictUI,
+  updateHintsDisplay, updateNumpad, setNotesModeUI, setConflictUI,
   showLoading, showComplete, showResume, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
@@ -22,6 +22,7 @@ function startNewGame(difficulty) {
       showLoading(false);
       buildGrid();
       updateHintsDisplay();
+      updateNumpad();
       setNotesModeUI(state.notesMode);
       setConflictUI(state.conflictCheck);
     });
@@ -46,6 +47,7 @@ function init() {
       renderPeersOf(detail.cell);
     }
     updateHintsDisplay();
+    updateNumpad();
   });
 
   document.addEventListener('selectionchange', () => {
@@ -98,6 +100,7 @@ function init() {
     hideOverlay();
     buildGrid();
     updateHintsDisplay();
+    updateNumpad();
     setNotesModeUI(state.notesMode);
     setConflictUI(state.conflictCheck);
     document.getElementById('difficulty-select').value = state.difficulty;
@@ -120,6 +123,7 @@ function init() {
     setConflictUI(state.conflictCheck);
     buildGrid();
     updateHintsDisplay();
+    updateNumpad();
     showResume();
   } else {
     startNewGame('medium');
