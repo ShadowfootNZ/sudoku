@@ -1,0 +1,454 @@
+/* ── Custom properties ──────────────────────────────────────────────────── */
+:root {
+  --bg:            #f2f2f7;
+  --header-bg:     #ffffff;
+  --grid-bg:       #ffffff;
+  --border-thin:   #c8c8d0;
+  --border-thick:  #2c2c2e;
+  --given-color:   #1a1a1a;
+  --given-bg:      #f0f0f5;
+  --user-color:    #1a6cc4;
+  --hint-color:    #8a3fa8;
+  --accent:        #d6eaff;
+  --peer-bg:       #eef4ff;
+  --conflict-bg:   #ffe0e0;
+  --conflict-color:#c01010;
+  --same-digit-bg: #c8e0ff;
+  --hint-cell-bg:  #fff3c0;
+  --note-color:    #4a4a5a;
+  --btn-bg:        #ffffff;
+  --btn-border:    #c8c8d0;
+  --btn-active-bg: #1a6cc4;
+  --btn-active-fg: #ffffff;
+  --mode-bg:       #e8e8f0;
+  --mode-active:   #1a6cc4;
+  --mode-active-fg:#ffffff;
+  --dialog-bg:     #ffffff;
+  --overlay-bg:    rgba(0,0,0,0.45);
+  --shadow:        0 2px 12px rgba(0,0,0,0.15);
+  --radius:        10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #1c1c1e;
+    --header-bg:     #2c2c2e;
+    --grid-bg:       #2c2c2e;
+    --border-thin:   #48484a;
+    --border-thick:  #d0d0d8;
+    --given-color:   #f0f0f0;
+    --given-bg:      #3a3a3c;
+    --user-color:    #5db8ff;
+    --hint-color:    #d08aff;
+    --accent:        #1e3a5a;
+    --peer-bg:       #252538;
+    --conflict-bg:   #5a1e1e;
+    --conflict-color:#ff7070;
+    --same-digit-bg: #1a3a5a;
+    --hint-cell-bg:  #4a3a00;
+    --note-color:    #aaaabc;
+    --btn-bg:        #3a3a3c;
+    --btn-border:    #545458;
+    --btn-active-bg: #5db8ff;
+    --btn-active-fg: #000000;
+    --mode-bg:       #3a3a3c;
+    --mode-active:   #5db8ff;
+    --mode-active-fg:#000000;
+    --dialog-bg:     #2c2c2e;
+    --overlay-bg:    rgba(0,0,0,0.65);
+  }
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: var(--given-color);
+}
+
+/* ── App shell ──────────────────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-thin);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+#header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+#header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#difficulty-select {
+  font-size: 15px;
+  font-family: inherit;
+  padding: 6px 28px 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
+  color: var(--given-color);
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+#new-game-btn {
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--given-color);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#hints-display {
+  font-size: 14px;
+  color: var(--note-color);
+  white-space: nowrap;
+  min-width: 62px;
+  text-align: right;
+}
+
+/* ── Main / grid area ───────────────────────────────────────────────────── */
+#main {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  container-type: size;
+}
+
+#grid-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Sudoku grid ────────────────────────────────────────────────────────── */
+#grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  border: 2px solid var(--border-thick);
+  border-radius: 4px;
+  overflow: hidden;
+  /* Square: fit the smaller of container width and height */
+  width:  min(100cqw - 20px, 100cqh - 20px);
+  height: min(100cqw - 20px, 100cqh - 20px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Fallback for browsers without container queries */
+@supports not (width: 1cqw) {
+  #grid {
+    width:  min(calc(100vw - 32px), calc(100dvh - 300px));
+    height: min(calc(100vw - 32px), calc(100dvh - 300px));
+  }
+}
+
+/* ── Cells ──────────────────────────────────────────────────────────────── */
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--grid-bg);
+  border-right: 1px solid var(--border-thin);
+  border-bottom: 1px solid var(--border-thin);
+  cursor: pointer;
+  transition: background 0.06s;
+  overflow: hidden;
+}
+
+/* Remove redundant outer edges */
+.cell:nth-child(9n)       { border-right: none; }
+.cell:nth-child(n+73)     { border-bottom: none; }
+
+/* Thick borders at 3×3 box boundaries — right side */
+.cell:nth-child(9n+3),
+.cell:nth-child(9n+6) {
+  border-right: 2px solid var(--border-thick);
+}
+
+/* Thick borders at 3×3 box boundaries — bottom side (rows 3 and 6) */
+.cell:nth-child(n+19):nth-child(-n+27),
+.cell:nth-child(n+46):nth-child(-n+54) {
+  border-bottom: 2px solid var(--border-thick);
+}
+
+/* Cell state backgrounds */
+.cell.given        { background: var(--given-bg); }
+.cell.peer         { background: var(--peer-bg); }
+.cell.same-digit   { background: var(--same-digit-bg); }
+.cell.hint-cell    { background: var(--hint-cell-bg); }
+.cell.conflict     { background: var(--conflict-bg); }
+.cell.selected     { background: var(--accent); }
+.cell.hover        { background: var(--peer-bg); }
+
+/* Digit text */
+.digit {
+  font-size: clamp(14px, 4.5cqmin, 30px);
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.given  .digit { color: var(--given-color); }
+.user   .digit { color: var(--user-color); }
+.conflict .digit { color: var(--conflict-color); }
+
+/* Hint-revealed cells (user answer via hint) get a distinct color */
+/* Applied by the 'user' class — hint reveals are regular answer entries */
+
+/* ── Notes (candidate digits) ───────────────────────────────────────────── */
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 92%;
+  height: 92%;
+  pointer-events: none;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(6px, 1.3cqmin, 11px);
+  font-weight: 500;
+  color: var(--note-color);
+  line-height: 1;
+}
+
+/* ── Loading overlay ────────────────────────────────────────────────────── */
+#loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg);
+  border-radius: 4px;
+}
+
+#loading p {
+  font-size: 16px;
+  color: var(--note-color);
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border-thin);
+  border-top-color: var(--user-color);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Controls ───────────────────────────────────────────────────────────── */
+#controls {
+  flex-shrink: 0;
+  padding: 8px 12px 4px;
+  background: var(--header-bg);
+  border-top: 1px solid var(--border-thin);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Number pad ─────────────────────────────────────────────────────────── */
+#numpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.num-btn {
+  height: 52px;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 10px;
+  color: var(--given-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.08s, transform 0.06s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.num-btn:active {
+  background: var(--accent);
+  transform: scale(0.93);
+}
+
+#delete-btn {
+  font-size: 20px;
+  color: var(--note-color);
+}
+
+/* ── Mode controls ──────────────────────────────────────────────────────── */
+#mode-controls {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.mode-btn {
+  height: 42px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--mode-bg);
+  border: none;
+  border-radius: 8px;
+  color: var(--given-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.08s;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.mode-btn.active {
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+}
+
+.mode-btn:active {
+  opacity: 0.7;
+}
+
+/* ── Overlay + dialogs ──────────────────────────────────────────────────── */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+#overlay.hidden { display: none; }
+
+.dialog {
+  background: var(--dialog-bg);
+  border-radius: var(--radius);
+  padding: 28px 24px 24px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dialog.hidden { display: none; }
+
+.dialog h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.dialog p {
+  font-size: 16px;
+  color: var(--note-color);
+  line-height: 1.4;
+}
+
+.dialog-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.dialog-btns button {
+  flex: 1;
+  height: 48px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 10px;
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.dialog-btns button.btn-secondary {
+  background: var(--mode-bg);
+  color: var(--given-color);
+}
+
+/* ── Scribble sink (off-screen, must not be display:none) ───────────────── */
+#scribble-input {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

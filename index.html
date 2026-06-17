@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sudoku">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
+  <title>Sudoku</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <header id="header">
+    <h1>Sudoku</h1>
+    <div id="header-right">
+      <select id="difficulty-select" aria-label="Difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <button id="new-game-btn">New Game</button>
+      <span id="hints-display">Hints: 0</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <div id="grid-container">
+      <div id="grid" role="grid" aria-label="Sudoku puzzle"></div>
+      <div id="loading" hidden>
+        <div class="spinner"></div>
+        <p>Generating puzzle…</p>
+      </div>
+    </div>
+  </main>
+
+  <div id="controls">
+    <div id="numpad">
+      <button class="num-btn" data-digit="1">1</button>
+      <button class="num-btn" data-digit="2">2</button>
+      <button class="num-btn" data-digit="3">3</button>
+      <button class="num-btn" data-digit="4">4</button>
+      <button class="num-btn" data-digit="5">5</button>
+      <button class="num-btn" data-digit="6">6</button>
+      <button class="num-btn" data-digit="7">7</button>
+      <button class="num-btn" data-digit="8">8</button>
+      <button class="num-btn" data-digit="9">9</button>
+      <button class="num-btn" id="delete-btn" aria-label="Delete">&#x232B;</button>
+    </div>
+    <div id="mode-controls">
+      <button id="notes-btn"    class="mode-btn" title="Toggle notes mode">&#x270E; Notes</button>
+      <button id="undo-btn"     class="mode-btn" title="Undo">&#x21A9; Undo</button>
+      <button id="fill-btn"     class="mode-btn" title="Fill candidates">&#x29C9; Fill</button>
+      <button id="hint-btn"     class="mode-btn" title="Hint">? Hint</button>
+      <button id="conflict-btn" class="mode-btn active" title="Toggle conflict check">&#x26A0; Check</button>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<!-- Hidden input: receives Scribble handwriting and keyboard digits -->
+<input id="scribble-input"
+       type="text"
+       inputmode="numeric"
+       maxlength="2"
+       autocomplete="off"
+       autocorrect="off"
+       autocapitalize="off"
+       spellcheck="false"
+       aria-hidden="true"
+       tabindex="-1">
+
+<!-- Overlay + dialogs -->
+<div id="overlay" class="hidden">
+  <div id="resume-dialog" class="dialog hidden">
+    <h2>Resume game?</h2>
+    <p>You have an unfinished puzzle.</p>
+    <div class="dialog-btns">
+      <button id="resume-btn">Resume</button>
+      <button id="discard-btn" class="btn-secondary">New Game</button>
+    </div>
+  </div>
+  <div id="complete-dialog" class="dialog hidden">
+    <h2>Puzzle Complete!</h2>
+    <p id="complete-details"></p>
+    <div class="dialog-btns">
+      <button id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
