@@ -72,12 +72,15 @@ export function initInput() {
     }
   });
 
-  // Pen hover: highlight cell without selecting
+  // Pen hover: highlight cell + pre-position Scribble input so it's ready before writing starts
   grid.addEventListener('pointerover', e => {
     if (e.pointerType === 'pen' && !(e.buttons & 1)) {
       document.querySelectorAll('.cell.hover').forEach(c => c.classList.remove('hover'));
       const cell = e.target.closest('[data-cell]');
-      if (cell) cell.classList.add('hover');
+      if (cell) {
+        cell.classList.add('hover');
+        focusScribble(cell); // Scribble needs the input on-screen during hover, before pointerdown
+      }
     }
   });
 
