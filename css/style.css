@@ -440,7 +440,7 @@ html, body {
 
 /* ── Scribble sink (off-screen, must not be display:none) ───────────────── */
 #scribble-input {
-  position: absolute;
+  position: fixed;
   left: -9999px;
   top: -9999px;
   width: 1px;

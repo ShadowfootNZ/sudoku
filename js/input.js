@@ -2,12 +2,23 @@
 
 import state from './state.js';
 
-let penActive = false;
-let penTimer  = null;
+let penActive         = false;
+let penTimer          = null;
+let touchDebounceTimer = null;
 
-function focusScribble() {
-  const el = document.getElementById('scribble-input');
-  if (el) el.focus({ preventScroll: true });
+// Position the hidden Scribble input over a grid cell so iPadOS Scribble
+// activates at the right place on screen, then focus it.
+function focusScribble(cellEl) {
+  const scribble = document.getElementById('scribble-input');
+  if (!scribble) return;
+  if (cellEl) {
+    const r = cellEl.getBoundingClientRect();
+    scribble.style.left   = r.left   + 'px';
+    scribble.style.top    = r.top    + 'px';
+    scribble.style.width  = r.width  + 'px';
+    scribble.style.height = r.height + 'px';
+  }
+  scribble.focus({ preventScroll: true });
 }
 
 function handleCellSelect(e) {
@@ -35,11 +46,19 @@ export function initInput() {
     if (e.pointerType === 'pen') {
       penActive = true;
       clearTimeout(penTimer);
+      clearTimeout(touchDebounceTimer);
       handleCellSelect(e);
-      focusScribble(); // only pen input uses Scribble — keeps keyboard off for finger taps
+      focusScribble(e.target.closest('[data-cell]'));
     } else if (e.pointerType === 'touch') {
-      if (!penActive) handleCellSelect(e);
-      // else: palm — ignore
+      if (!penActive) {
+        // 50 ms debounce: if the pen fires concurrently (palm landing before
+        // the tip registers) the penActive flag will be set before this fires.
+        clearTimeout(touchDebounceTimer);
+        touchDebounceTimer = setTimeout(() => {
+          if (!penActive) handleCellSelect(e);
+        }, 50);
+      }
+      // else: penActive — palm contact while pencil is in use, ignore
     } else {
       handleCellSelect(e); // mouse (desktop testing)
     }
@@ -47,8 +66,9 @@ export function initInput() {
 
   grid.addEventListener('pointerup', e => {
     if (e.pointerType === 'pen') {
-      // Keep penActive true for a short window so a resting palm is ignored
-      penTimer = setTimeout(() => { penActive = false; }, 300);
+      // Keep penActive true for 500 ms after pen lifts so a resting palm
+      // that follows can't accidentally select a cell.
+      penTimer = setTimeout(() => { penActive = false; }, 500);
     }
   });
 
