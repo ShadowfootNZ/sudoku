@@ -186,3 +186,7 @@ export function showComplete() {
 export function showResume() {
   showOverlay('resume-dialog');
 }
+
+export function showHelp() {
+  showOverlay('help-dialog');
+}

@@ -5,7 +5,7 @@ import {
   buildGrid, renderAll, renderPeersOf,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
   updateHintBtn, updateNumpad, setNotesModeUI, setConflictUI,
-  showLoading, showComplete, showResume, hideOverlay,
+  showLoading, showComplete, showResume, showHelp, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
 import { generateComplete, createPuzzle } from './generator.js';
@@ -133,7 +133,7 @@ function init() {
   });
 
   document.getElementById('help-btn').addEventListener('click', () => {
-    showOverlay('help-dialog');
+    showHelp();
   });
 
   document.getElementById('help-close-btn').addEventListener('click', () => {
