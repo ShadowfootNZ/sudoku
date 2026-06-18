@@ -85,7 +85,7 @@ export function generateComplete() {
 
 // Remove cells while maintaining a unique solution
 export function createPuzzle(solution, difficulty) {
-  const clues = { easy: 36, medium: 30, hard: 25 }[difficulty] ?? 30;
+  const clues = { easy: 36, medium: 30, hard: 25, veryhard: 22 }[difficulty] ?? 30;
   const toRemove = 81 - clues;
   const puzzle = [...solution];
   const positions = shuffle(Array.from({ length: 81 }, (_, i) => i));

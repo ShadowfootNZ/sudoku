@@ -31,6 +31,8 @@ const _s = {
   notesMode:    false,
   conflictCheck: true,
   hintsUsed:    0,
+  hintsPointed: 0,
+  errors:       0,
   difficulty:   'medium',
 };
 
@@ -86,7 +88,9 @@ function pushHistory() {
 const state = {
   get selected()     { return _s.selected; },
   get hintCell()     { return _s.hintCell; },
-  get hintsUsed()    { return _s.hintsUsed; },
+  get hintsUsed()     { return _s.hintsUsed; },
+  get hintsPointed()  { return _s.hintsPointed; },
+  get errors()        { return _s.errors; },
   get difficulty()   { return _s.difficulty; },
   get notesMode()    { return _s.notesMode; },
   get conflictCheck(){ return _s.conflictCheck; },
@@ -111,7 +115,9 @@ const state = {
     _s.history     = [];
     _s.redoStack   = [];
     _s.difficulty  = difficulty;
-    _s.hintsUsed   = 0;
+    _s.hintsUsed    = 0;
+    _s.hintsPointed = 0;
+    _s.errors       = 0;
     state.save();
     emit('statechange', { all: true });
     emit('selectionchange', { cell: -1 });
@@ -126,7 +132,12 @@ const state = {
   setValue(cell, digit) {
     if (_s.given[cell]) return;
     pushHistory();
+    if (_s.conflictCheck && _s.answer[cell] !== digit && isConflict(cell, digit)) {
+      _s.errors++;
+      emit('errorschanged');
+    }
     _s.answer[cell] = digit;
+    if (_s.hintCell === cell) _s.hintCell = -1;
     _s.notes[cell].clear();
     pruneAllCandidates();
     state.save();
@@ -192,40 +203,40 @@ const state = {
   },
 
   getHint() {
-    // Find naked singles (only one valid candidate)
+    if (_s.hintCell !== -1) return; // already have an active hint
     const nakeds = [];
     for (let i = 0; i < 81; i++) {
       if (_s.given[i] || _s.answer[i]) continue;
-      const cands = validCandidates(i);
-      if (cands.size === 1) nakeds.push(i);
+      if (validCandidates(i).size === 1) nakeds.push(i);
     }
     const pool = nakeds.length > 0
       ? nakeds
       : Array.from({ length: 81 }, (_, i) => i)
           .filter(i => !_s.given[i] && !_s.answer[i]);
-
     if (!pool.length) return;
+    _s.hintCell = pool[Math.floor(Math.random() * pool.length)];
+    _s.hintsPointed++;
+    state.selectCell(_s.hintCell);
+    state.save();
+    emit('statechange', { cell: _s.hintCell });
+    emit('hintschanged');
+  },
 
-    if (_s.hintCell !== -1 && pool.includes(_s.hintCell)) {
-      // Second tap on already-hinted cell → reveal answer
-      pushHistory();
-      const val = _s.solution[_s.hintCell];
-      _s.answer[_s.hintCell] = val;
-      _s.notes[_s.hintCell].clear();
-      pruneAllCandidates();
-      _s.hintsUsed++;
-      const revealed = _s.hintCell;
+  peekCell(cell) {
+    if (_s.given[cell] || _s.answer[cell]) return;
+    pushHistory();
+    _s.answer[cell] = _s.solution[cell];
+    _s.notes[cell].clear();
+    pruneAllCandidates();
+    _s.hintsUsed++;
+    // Clear the active hint if the hinted cell now has a value
+    if (_s.hintCell !== -1 && (_s.given[_s.hintCell] || _s.answer[_s.hintCell])) {
       _s.hintCell = -1;
-      state.save();
-      emit('statechange', { cell: revealed });
-      emit('hintschanged');
-      if (state.isComplete()) emit('complete');
-    } else {
-      // First tap → point to a constrained cell
-      _s.hintCell = pool[Math.floor(Math.random() * pool.length)];
-      state.selectCell(_s.hintCell);
-      emit('statechange', { cell: _s.hintCell });
     }
+    state.save();
+    emit('statechange', { cell });
+    emit('hintschanged');
+    if (state.isComplete()) emit('complete');
   },
 
   isComplete() {
@@ -247,6 +258,8 @@ const state = {
         conflictCheck: _s.conflictCheck,
         notesMode:     _s.notesMode,
         hintsUsed:     _s.hintsUsed,
+        hintsPointed:  _s.hintsPointed,
+        errors:        _s.errors,
         selected:      _s.selected,
       }));
     } catch (_) {}
@@ -266,6 +279,8 @@ const state = {
       _s.conflictCheck = d.conflictCheck ?? true;
       _s.notesMode     = d.notesMode     ?? false;
       _s.hintsUsed     = d.hintsUsed     ?? 0;
+      _s.hintsPointed  = d.hintsPointed  ?? 0;
+      _s.errors        = d.errors        ?? 0;
       _s.selected      = d.selected      ?? -1;
       _s.hintCell      = -1;
       _s.history       = [];

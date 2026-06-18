@@ -139,12 +139,18 @@ html, body {
   touch-action: manipulation;
 }
 
-#hints-display {
+#header-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 14px;
   color: var(--note-color);
   white-space: nowrap;
-  min-width: 62px;
-  text-align: right;
+}
+
+#timer-display {
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
 }
 
 /* ── Main / grid area ───────────────────────────────────────────────────── */
@@ -311,9 +317,8 @@ html, body {
 }
 
 .num-btn {
+  position: relative;
   height: 52px;
-  font-size: 22px;
-  font-weight: 600;
   font-family: inherit;
   background: var(--btn-bg);
   border: 1px solid var(--btn-border);
@@ -327,6 +332,22 @@ html, body {
   transition: background 0.08s, transform 0.06s;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.num-digit {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.num-remaining {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--note-color);
+  line-height: 1;
 }
 
 .num-btn:active {

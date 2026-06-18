@@ -20,13 +20,19 @@
   <header id="header">
     <h1>Sudoku</h1>
     <div id="header-right">
+      <div id="header-stats">
+        <span id="timer-display">0:00</span>
+        <span id="errors-display">0 Errors</span>
+        <span id="hints-display">0 Hints</span>
+        <span id="reveals-display">👁0</span>
+      </div>
       <select id="difficulty-select" aria-label="Difficulty">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
         <option value="hard">Hard</option>
+        <option value="veryhard">Very Hard</option>
       </select>
       <button id="new-game-btn">New Game</button>
-      <span id="hints-display">Hints: 0</span>
     </div>
   </header>
 
@@ -42,15 +48,15 @@
 
   <div id="controls">
     <div id="numpad">
-      <button class="num-btn" data-digit="1">1</button>
-      <button class="num-btn" data-digit="2">2</button>
-      <button class="num-btn" data-digit="3">3</button>
-      <button class="num-btn" data-digit="4">4</button>
-      <button class="num-btn" data-digit="5">5</button>
-      <button class="num-btn" data-digit="6">6</button>
-      <button class="num-btn" data-digit="7">7</button>
-      <button class="num-btn" data-digit="8">8</button>
-      <button class="num-btn" data-digit="9">9</button>
+      <button class="num-btn" data-digit="1"><span class="num-digit">1</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="2"><span class="num-digit">2</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="3"><span class="num-digit">3</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="4"><span class="num-digit">4</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="5"><span class="num-digit">5</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="6"><span class="num-digit">6</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="7"><span class="num-digit">7</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="8"><span class="num-digit">8</span><span class="num-remaining"></span></button>
+      <button class="num-btn" data-digit="9"><span class="num-digit">9</span><span class="num-remaining"></span></button>
       <button class="num-btn" id="delete-btn" aria-label="Delete">&#x232B;</button>
     </div>
     <div id="mode-controls">

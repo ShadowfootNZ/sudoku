@@ -99,13 +99,44 @@ export function updateNumpad() {
     if (v) counts[v]++;
   }
   document.querySelectorAll('.num-btn[data-digit]').forEach(btn => {
-    btn.disabled = counts[parseInt(btn.dataset.digit, 10)] >= 9;
+    const d = parseInt(btn.dataset.digit, 10);
+    const remaining = 9 - counts[d];
+    btn.disabled = remaining === 0;
+    const remEl = btn.querySelector('.num-remaining');
+    if (remEl) remEl.textContent = remaining;
   });
 }
 
 export function updateHintsDisplay() {
+  const n = state.hintsPointed;
   const el = document.getElementById('hints-display');
-  if (el) el.textContent = `Hints: ${state.hintsUsed}`;
+  if (el) el.textContent = `${n} ${n === 1 ? 'Hint' : 'Hints'}`;
+}
+
+export function updateRevealsDisplay() {
+  const el = document.getElementById('reveals-display');
+  if (el) el.textContent = `👁${state.hintsUsed}`;
+}
+
+export function updateErrorsDisplay() {
+  const n = state.errors;
+  const el = document.getElementById('errors-display');
+  if (el) el.textContent = `${n} ${n === 1 ? 'Error' : 'Errors'}`;
+}
+
+export function updateTimerDisplay(ms) {
+  const el = document.getElementById('timer-display');
+  if (!el) return;
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export function updateHintBtn() {
+  const btn = document.getElementById('hint-btn');
+  if (!btn) return;
+  btn.textContent = state.hintCell !== -1 ? '👁 Peek' : '? Hint';
 }
 
 export function setNotesModeUI(active) {
