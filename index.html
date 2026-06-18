@@ -63,14 +63,14 @@
       <button class="num-btn" data-digit="7"><span class="num-digit">7</span><span class="num-remaining"></span></button>
       <button class="num-btn" data-digit="8"><span class="num-digit">8</span><span class="num-remaining"></span></button>
       <button class="num-btn" data-digit="9"><span class="num-digit">9</span><span class="num-remaining"></span></button>
-      <button class="num-btn" id="delete-btn" aria-label="Delete">&#x232B;</button>
+      <button class="num-btn" id="delete-btn" aria-label="Delete">🗑️</button>
     </div>
     <div id="mode-controls">
-      <button id="notes-btn"    class="mode-btn" title="Toggle notes mode">&#x270E; Notes</button>
-      <button id="undo-btn"     class="mode-btn" title="Undo">&#x21A9; Undo</button>
-      <button id="fill-btn"     class="mode-btn" title="Fill candidates">&#x29C9; Fill</button>
-      <button id="hint-btn"     class="mode-btn" title="Hint">? Hint</button>
-      <button id="conflict-btn" class="mode-btn active" title="Toggle conflict check">&#x26A0; Check</button>
+      <button id="notes-btn"    class="mode-btn" title="Toggle notes mode">✏️ Notes</button>
+      <button id="undo-btn"     class="mode-btn" title="Undo">↩️ Undo</button>
+      <button id="fill-btn"     class="mode-btn" title="Fill candidates">✍️ Fill</button>
+      <button id="hint-btn"     class="mode-btn" title="Hint">🔍 Hint</button>
+      <button id="conflict-btn" class="mode-btn active" title="Toggle conflict check">✅ Check</button>
     </div>
   </div>
 
@@ -110,19 +110,19 @@
     <div id="help-content">
       <div class="help-section">
         <strong>Hint &amp; Peek</strong>
-        <p>Tap <b>? Hint</b> to highlight a cell the solver recommends as a good next move. The button changes to <b>👁 Peek</b>. Tap Peek to reveal the answer for whichever cell is currently selected — it doesn't have to be the highlighted one. The hint clears once the highlighted cell is filled.</p>
+        <p>Tap <b>🔍 Hint</b> to highlight a cell the solver recommends as a good next move. The button changes to <b>👁 Peek</b>. Tap Peek to reveal the answer for whichever cell is currently selected — it doesn't have to be the highlighted one. The hint clears once the highlighted cell is filled.</p>
       </div>
       <div class="help-section">
         <strong>Notes Mode</strong>
-        <p>Tap <b>✏ Notes</b> to switch digit buttons from placing an answer to toggling small pencil-mark candidates. Tap again to return to answer mode. Notes are automatically removed when a related cell is filled.</p>
+        <p>Tap <b>✏️ Notes</b> to switch digit buttons from placing an answer to toggling small pencil-mark candidates. Tap again to return to answer mode. Notes are automatically removed when a related cell is filled.</p>
       </div>
       <div class="help-section">
         <strong>Fill Candidates</strong>
-        <p>With a cell selected, tap <b>⊡ Fill</b> to fill that cell's notes with every currently valid digit. With nothing selected, it fills the whole board at once.</p>
+        <p>With a cell selected, tap <b>✍️ Fill</b> to fill that cell's notes with every currently valid digit. With nothing selected, it fills the whole board at once.</p>
       </div>
       <div class="help-section">
         <strong>Conflict Check</strong>
-        <p>Tap <b>⚠ Check</b> to toggle red highlighting. When on, any digit you enter that already appears in the same row, column, or box is highlighted red. This checks only against digits you've entered — not the solution — so an incorrect digit that doesn't duplicate anything won't be flagged.</p>
+        <p>Tap <b>✅ Check</b> to toggle red highlighting. When on, any digit you enter that already appears in the same row, column, or box is highlighted red. This checks only against digits you've entered — not the solution — so an incorrect digit that doesn't duplicate anything won't be flagged.</p>
       </div>
       <div class="help-section">
         <strong>Remaining Count</strong>
