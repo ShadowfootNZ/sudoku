@@ -178,10 +178,6 @@ html, body {
   white-space: nowrap;
 }
 
-#errors-display.has-errors {
-  color: var(--conflict-color);
-}
-
 
 /* ── Main / grid area ───────────────────────────────────────────────────── */
 #main {

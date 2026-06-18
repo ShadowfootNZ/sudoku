@@ -108,21 +108,27 @@ export function updateNumpad() {
 }
 
 export function updateHintsDisplay() {
+  const n = state.hintsPointed;
   const el = document.getElementById('hints-display');
-  if (el) el.textContent = `🔍${state.hintsPointed}`;
+  if (!el) return;
+  el.textContent = `🔍${n}`;
+  el.hidden = n === 0;
 }
 
 export function updateRevealsDisplay() {
+  const n = state.hintsUsed;
   const el = document.getElementById('reveals-display');
-  if (el) el.textContent = `👁${state.hintsUsed}`;
+  if (!el) return;
+  el.textContent = `👁${n}`;
+  el.hidden = n === 0;
 }
 
 export function updateErrorsDisplay() {
   const n = state.errors;
   const el = document.getElementById('errors-display');
   if (!el) return;
-  el.textContent = `✕${n}`;
-  el.classList.toggle('has-errors', n > 0);
+  el.textContent = `❌${n}`;
+  el.hidden = n === 0;
 }
 
 export function updateHintBtn() {
