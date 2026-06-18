@@ -15,10 +15,16 @@ A Sudoku game playable in Safari on iPad with Apple Pencil support. Hosted as a 
 sudoku/
 ├── index.html          # App shell, viewport meta, PWA meta tags
 ├── manifest.json       # PWA: standalone, portrait, icons
-├── sw.js               # Cache-first service worker (currently v2)
+├── sw.js               # Cache-first service worker (currently v23)
 ├── icons/
-│   ├── icon-192.png    # PWA icon (generated via PowerShell System.Drawing)
-│   └── icon-512.png    # PWA icon + apple-touch-icon
+│   ├── icon-192.png          # Original sudoku PWA icon (kept for SW cache)
+│   ├── icon-512.png          # Original sudoku PWA icon; used as apple-touch-icon
+│   ├── apple-touch-icon.png  # Footprint image (NOT used as apple-touch-icon — icon-512.png is)
+│   ├── favicon.ico           # Footprint favicon
+│   ├── favicon-16x16.png     # Footprint favicon
+│   ├── favicon-32x32.png     # Footprint favicon
+│   ├── favicon-192x192.png   # Footprint favicon; also used as header logo img
+│   └── favicon-512x512.png   # Footprint favicon; used in manifest icons
 ├── css/
 │   └── style.css       # All styles, CSS custom props, dark mode
 └── js/
@@ -39,7 +45,7 @@ sudoku/
 - `statechange { all: true }` → `renderAll()` (full grid re-render)
 - `statechange { cell: N }` → `renderPeersOf(N)` (only affected cells)
 - `selectionchange` → `renderAll()` (peer/same-digit highlights depend on selection)
-- `complete` → `showComplete()` + stops timer
+- `complete` → `showComplete()` (completion animation then dialog)
 - `hintschanged` → `updateHintsDisplay()` + `updateRevealsDisplay()` + `updateHintBtn()`
 - `errorschanged` → `updateErrorsDisplay()`
 
@@ -62,21 +68,38 @@ Difficulty clue counts: easy=36, medium=30, hard=25, veryhard=22.
   "hintsUsed":    0,             // peek (answer reveals) count
   "hintsPointed": 0,             // hint (cell highlight) count
   "errors":       0,             // conflicting digit placements (conflictCheck ON only)
-  "selected":     -1
+  "selected":     -1,
+  "fillOrder":    [14,72,3,...]  // cell indices in order they were filled by player
 }
 ```
-Timer is stored separately under `sudoku-timer` (elapsed milliseconds). Cleared on new game, saved on `visibilitychange` and `complete`.
 
 ### Hint / Peek System
-Single `? Hint` button with two modes:
-- **Hint mode** (`? Hint`): finds a naked-single or constrained empty cell, highlights it yellow (`hintCell`), increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
+Single `🔍 Hint` button with two modes:
+- **Hint mode** (`🔍 Hint`): finds a naked-single or constrained empty cell, highlights it yellow (`hintCell`), increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
 - **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`. `hintCell` is cleared only when the hinted cell has a value — so peeking a different cell leaves the hint active.
 - `hintCell` is also cleared when the player fills it themselves (in `setValue()`).
 - Undo restores `hintCell` (it's in the history snapshot alongside `hintsUsed`).
-- Header shows: `N Hints` (pointer count) · `👁N` (reveal count) separately.
+- Header shows: `🔍N` (pointer count) · `👁N` (reveal count) — both hidden when 0.
 
-### Timer
-Managed entirely in `app.js`. `timerElapsed` (accumulated ms) + `timerStart` (segment start timestamp, null when paused). Starts after puzzle generation or Resume click — not while a dialog is showing. Pauses on `visibilitychange` hidden and on `complete`. Elapsed saved to `sudoku-timer` localStorage key. Displayed as `M:SS` with `font-variant-numeric: tabular-nums`.
+### Header Stats
+Three emoji counters, all hidden when zero (using HTML `hidden` attribute set in JS):
+- `❌N` — errors (conflicting placements when conflict check ON)
+- `🔍N` — hints used (cell highlights)
+- `👁N` — peeks used (answer reveals)
+
+### Completion Animation
+Triggered from `showComplete()` in `ui.js`:
+1. `state.fillOrder` provides cell indices oldest-first; reversed so last-placed flashes first.
+2. Each cell in the reversed order gets `.completing` class + staggered `animationDelay`. Total stagger capped at 600ms: `delay = (i / (n-1)) * min(600, (n-1)*30)`.
+3. `@keyframes completion-flash` does transparent → gold (`rgba(245,197,24,0.88)`) → transparent over 480ms.
+4. Dialog appears via `setTimeout` after stagger + flash duration + 80ms buffer (~1.1s total).
+5. `fillOrder[]` is tracked in state: `setValue()` and `peekCell()` remove-then-push the cell; `clearCell()` splices it out; snapshots include it so undo restores the sequence correctly.
+
+### Help Dialog
+- `?` button in header triggers `showHelp()` → `showOverlay('help-dialog')`.
+- Uses the same overlay/dialog system as resume and complete dialogs.
+- `max-width: min(80vw, 800px)` — wider than other dialogs; scrollable content area.
+- Six sections: Hint & Peek, Notes Mode, Fill Candidates, Conflict Check, Remaining Count, Apple Pencil.
 
 ### Palm Rejection
 `penActive` flag + 500ms release window. Touch events debounced 50ms to allow concurrent pen `pointerdown` to arrive first and set `penActive`.
@@ -103,7 +126,7 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 | Grid invisible | `min(100cqw - 20px, ...)` invalid CSS | `aspect-ratio:1/1; max-height:100%` |
 | Font sizes wrong | `cqmin` units not widely supported | Changed to `vmin` |
 | Spinner never hid after generation | `display:flex` in author CSS overrides UA `[hidden]{display:none}` (no `!important`) | Added `[hidden]{display:none!important}` to reset |
-| Browser cache serving stale JS | Service worker cached old `app.js` under `sudoku-v1` | Bumped to `sudoku-v2`; fixed `skipWaiting`/`clients.claim` order |
+| Browser cache serving stale JS | Service worker cached old `app.js` under `sudoku-v1` | Bumped cache version; fixed `skipWaiting`/`clients.claim` order |
 | Keyboard popped up on finger tap | `focusScribble()` called for all pointer types | Only call `focusScribble()` for `pointerType === 'pen'` |
 | Pinch zoom gets stuck | iOS ignores `user-scalable=no` | Added `touch-action:none` on `html,body` |
 | Scribble overlay off-screen | Hidden input at `left:-9999px`; Scribble needs field on-screen | Reposition input over tapped cell using `getBoundingClientRect()` |
@@ -112,6 +135,7 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 | Scribble suppressed by `preventDefault` | WKWebView passes `preventDefault()` signal to OS, blocking Scribble | Don't call `preventDefault()` for pen `pointerdown` events |
 | Second consecutive Scribble write fails | iPadOS treats session as done while input stays focused | Call `scribble.blur()` after each handled input event; hover re-focuses |
 | Wrong cell selected for Scribble input | Scribble can suppress `pointerdown`, leaving old cell selected | Guard in `input`/`keydown` handlers: `selectCell(scribbleCell)` if mismatch |
+| Help button tap had no effect | `showOverlay()` called directly in app.js without being imported | Added `showHelp()` wrapper to ui.js; imported in app.js |
 
 ---
 
@@ -121,10 +145,16 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 - Font sizes use `vmin` not `cqmin` (container query units have limited support).
 - Dark mode via `@media (prefers-color-scheme: dark)` overriding CSS custom properties.
 - `touch-action: none` on `html, body` — effective zoom prevention (viewport meta `user-scalable=no` is ignored by iOS 10+).
-- Numpad buttons use `flex-direction: column` — `.num-digit` (20px, centred) stacked above `.num-remaining` (10px). Remaining count is `position: absolute; bottom: 4px; right: 6px` so it sits in the corner without affecting the digit's centring.
-- Header stats (`#header-stats`): flex row with `timer-display`, `errors-display`, `hints-display`, `reveals-display` spans. Timer uses `font-variant-numeric: tabular-nums` to prevent layout shift.
+- Numpad buttons: `position: relative`; `.num-digit` centred; `.num-remaining` is `position: absolute; bottom: 4px; right: 6px` — corner badge without affecting digit centering.
+- Header stats (`#header-stats`): flex row with `❌N` / `🔍N` / `👁N` spans. Each span uses HTML `hidden` attribute (toggled in JS) to disappear when count is 0.
+- Completion animation: `.cell.completing` + `@keyframes completion-flash` (gold rgba); `transition: none` on `.completing` to prevent the cell's normal `transition: background` from interfering.
+- Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
 
-## PWA Notes
-- Service worker cache name is `sudoku-v13`. Bump this any time cached files need to be force-evicted.
+## PWA / Icons Notes
+- Service worker cache name is `sudoku-v23`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
+- **Browser favicon**: footprint icons (`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`).
+- **iPad/iPhone home screen** (`apple-touch-icon`): `icons/icon-512.png` — the sudoku image, NOT the footprint.
+- **PWA manifest icons**: `favicon-192x192.png` + `favicon-512x512.png` (footprint) for Android/Chrome installs.
+- **Header logo**: `favicon-192x192.png` displayed at 28×28px, left of the "Sudoku" h1.

@@ -8,8 +8,6 @@
 
 ## Requested Features (implement when asked)
 
-- [x] **Very Hard difficulty** — 22 clues (vs Hard=25). Can try 20 if 22 feels too easy after testing.
-
 - [ ] **Technique-based difficulty grading** (big feature)  
   Replace the current clue-count difficulty system with one based on what solving techniques are actually required. The current system (easy=36 clues, medium=30, hard=25, veryhard=22) is a rough proxy — two puzzles with the same clue count can have wildly different solving experiences.
 
@@ -46,35 +44,18 @@
   - Generation loop may need a retry cap (e.g. 50 attempts) with a fallback to looser grading
   - This is a significant rewrite of the generation pipeline; keep existing clue-count system working in parallel during development
 
-- [x] **Hint / Peek split** — single button changes label between "? Hint" (pointing) and "👁 Peek" (reveal selected cell). Header shows "N Hints" and "👁N" as separate counters. Hint clears when hinted cell gets a value.
-
-- [x] **Error counter** — counts conflicting digit placements when conflict check is ON; shown as "N Error/Errors" in header; persists to localStorage.
-
-- [x] **Game timer** — elapsed M:SS; pauses on visibilitychange and on completion; persists elapsed ms under `sudoku-timer` localStorage key; shown in header.
-
----
-
-- [x] **Completion animation**  
-  Reverse solve-order gold flash. `fillOrder[]` tracked in state (setValue/clearCell/peekCell/snapshot). `showComplete()` stagers `.completing` class in reverse, setTimeout shows dialog after last flash completes (~1.1s total). SW cache bumped to v14.
-
-- [x] **Remaining digit count on numpad buttons**
-
-- [ ] **Pause / hide grid**  
-  A pause button that covers the grid (blurred overlay) and stops the timer. Useful when handing the device to someone. Single tap to resume. No state change — purely visual.
-
 ---
 
 ## Potential Issues to Watch
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v13`.
+- Service worker cache is currently `sudoku-v23`.
 
 ---
 
 ## Done ✓
 - [x] Puzzle generator (backtracking + MRV, main thread)
 - [x] All game state (given/answer/notes/history/undo/redo)
-- [x] Hint/Peek system: "? Hint" highlights constrained cell; button changes to "👁 Peek" which reveals selected cell; separate Hints/👁 counters in header
 - [x] Auto-prune candidates after every mutation
 - [x] Context-sensitive Fill Candidates (single cell or all)
 - [x] Conflict highlighting (toggleable)
@@ -94,9 +75,13 @@
 - [x] Distinct hover colour (mint green) vs peer highlights (blue)
 - [x] Scribble-ready green tint via #scribble-input:focus CSS
 - [x] Fixed: spinner never hiding ([hidden] CSS override bug)
-- [x] Fixed: service worker stale cache (now v13)
 - [x] Numpad remaining count — right-aligned corner badge showing how many of each digit still to place
 - [x] Very Hard difficulty (22 clues)
-- [x] Error counter ("N Errors" in header, only when conflict check ON)
-- [x] Game timer (M:SS, pauses on visibilitychange, persists to sudoku-timer localStorage key)
-- [x] Hint/Peek split with separate header counters
+- [x] Error counter — ❌N in header, only when conflict check ON, hidden when 0
+- [x] Game timer — added then **removed by user decision**: no common puzzle-of-the-day makes times incomparable; app is for pleasure not competition
+- [x] Hint/Peek split — 🔍 Hint highlights constrained cell; button changes to 👁 Peek which reveals selected cell; 🔍N and 👁N counters in header, hidden when 0
+- [x] Completion animation — reverse solve-order gold flash; `fillOrder[]` in state tracks fill sequence; `showComplete()` staggers `.completing` CSS class, shows dialog after ~1.1s
+- [x] Help dialog — ? button in header; scrollable "How to Play" with 6 sections; up to min(80vw, 800px) wide
+- [x] Favicon/branding — footprint icons (favicon.ico, 16/32/192/512px PNGs) for browser tabs; apple-touch-icon uses icon-512.png (sudoku image) for iPad home screen; footprint also shown in header next to title
+- [x] Header stats as emoji icons — ❌N / 🔍N / 👁N, hidden when zero; all appear as earned
+- [x] Button emoji — ✏️ Notes, ↩️ Undo, ✍️ Fill, 🔍 Hint / 👁 Peek, ✅ Check, 🗑️ delete
