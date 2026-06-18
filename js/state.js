@@ -34,6 +34,7 @@ const _s = {
   hintsPointed: 0,
   errors:       0,
   difficulty:   'medium',
+  fillOrder:    [], // cell indices in the order they were filled by the player
 };
 
 function emit(type, detail = {}) {
@@ -69,6 +70,7 @@ function snapshot() {
     notes:     _s.notes.map(s => new Set(s)),
     hintCell:  _s.hintCell,
     hintsUsed: _s.hintsUsed,
+    fillOrder: [..._s.fillOrder],
   };
 }
 
@@ -77,6 +79,7 @@ function restoreSnapshot(snap) {
   _s.notes     = snap.notes;
   _s.hintCell  = snap.hintCell;
   _s.hintsUsed = snap.hintsUsed;
+  _s.fillOrder = snap.fillOrder ?? [];
 }
 
 function pushHistory() {
@@ -94,6 +97,7 @@ const state = {
   get difficulty()   { return _s.difficulty; },
   get notesMode()    { return _s.notesMode; },
   get conflictCheck(){ return _s.conflictCheck; },
+  get fillOrder()    { return _s.fillOrder; },
   get raw()          { return _s; },
   PEERS,
   isConflict,
@@ -118,6 +122,7 @@ const state = {
     _s.hintsUsed    = 0;
     _s.hintsPointed = 0;
     _s.errors       = 0;
+    _s.fillOrder    = [];
     state.save();
     emit('statechange', { all: true });
     emit('selectionchange', { cell: -1 });
@@ -139,6 +144,9 @@ const state = {
     _s.answer[cell] = digit;
     if (_s.hintCell === cell) _s.hintCell = -1;
     _s.notes[cell].clear();
+    const fo1 = _s.fillOrder.indexOf(cell);
+    if (fo1 !== -1) _s.fillOrder.splice(fo1, 1);
+    _s.fillOrder.push(cell);
     pruneAllCandidates();
     state.save();
     emit('statechange', { cell });
@@ -150,6 +158,8 @@ const state = {
     pushHistory();
     _s.answer[cell] = EMPTY;
     _s.notes[cell].clear();
+    const fo2 = _s.fillOrder.indexOf(cell);
+    if (fo2 !== -1) _s.fillOrder.splice(fo2, 1);
     pruneAllCandidates();
     state.save();
     emit('statechange', { cell });
@@ -227,6 +237,9 @@ const state = {
     pushHistory();
     _s.answer[cell] = _s.solution[cell];
     _s.notes[cell].clear();
+    const fo3 = _s.fillOrder.indexOf(cell);
+    if (fo3 !== -1) _s.fillOrder.splice(fo3, 1);
+    _s.fillOrder.push(cell);
     pruneAllCandidates();
     _s.hintsUsed++;
     // Clear the active hint if the hinted cell now has a value
@@ -261,6 +274,7 @@ const state = {
         hintsPointed:  _s.hintsPointed,
         errors:        _s.errors,
         selected:      _s.selected,
+        fillOrder:     _s.fillOrder,
       }));
     } catch (_) {}
   },
@@ -282,6 +296,7 @@ const state = {
       _s.hintsPointed  = d.hintsPointed  ?? 0;
       _s.errors        = d.errors        ?? 0;
       _s.selected      = d.selected      ?? -1;
+      _s.fillOrder     = d.fillOrder     ?? [];
       _s.hintCell      = -1;
       _s.history       = [];
       _s.redoStack     = [];

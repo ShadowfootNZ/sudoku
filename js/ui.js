@@ -163,11 +163,33 @@ export function hideOverlay() {
 }
 
 export function showComplete() {
-  const el = document.getElementById('complete-details');
-  el.textContent = state.hintsUsed === 0
-    ? 'Solved without any hints!'
-    : `Hints used: ${state.hintsUsed}`;
-  showOverlay('complete-dialog');
+  const fillOrder = state.fillOrder; // oldest fill first
+  const n = fillOrder.length;
+
+  // Reverse so the last cell placed flashes first (delay 0)
+  const reversed = fillOrder.slice().reverse();
+  const maxStagger = n > 1 ? Math.min(600, (n - 1) * 30) : 0;
+
+  reversed.forEach((cellIdx, i) => {
+    const el = cells[cellIdx];
+    if (!el) return;
+    const delay = n > 1 ? Math.round((i / (n - 1)) * maxStagger) : 0;
+    el.style.animationDelay = `${delay}ms`;
+    el.classList.add('completing');
+  });
+
+  const flashDuration = 480; // matches CSS
+  setTimeout(() => {
+    cells.forEach(el => {
+      el.classList.remove('completing');
+      el.style.animationDelay = '';
+    });
+    const detailEl = document.getElementById('complete-details');
+    detailEl.textContent = state.hintsUsed === 0
+      ? 'Solved without any hints!'
+      : `Hints used: ${state.hintsUsed}`;
+    showOverlay('complete-dialog');
+  }, maxStagger + flashDuration + 80);
 }
 
 export function showResume() {

@@ -54,8 +54,8 @@
 
 ---
 
-- [ ] **Completion animation**  
-  When the puzzle is solved, briefly animate the cells before showing the completion dialog — e.g. a ripple of the accent colour sweeping across the grid in solve-order. CSS `animation` + staggered `animation-delay` based on cell index. Short (≤800ms), non-blocking. Trigger from `showComplete()` in `ui.js` before the dialog appears.
+- [x] **Completion animation**  
+  Reverse solve-order gold flash. `fillOrder[]` tracked in state (setValue/clearCell/peekCell/snapshot). `showComplete()` stagers `.completing` class in reverse, setTimeout shows dialog after last flash completes (~1.1s total). SW cache bumped to v14.
 
 - [x] **Remaining digit count on numpad buttons**
 

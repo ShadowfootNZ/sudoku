@@ -297,6 +297,17 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes completion-flash {
+  0%   { background-color: transparent; }
+  15%  { background-color: rgba(245, 197, 24, 0.88); }
+  100% { background-color: transparent; }
+}
+
+.cell.completing {
+  animation: completion-flash 480ms ease-out;
+  transition: none;
+}
+
 /* ── Controls ───────────────────────────────────────────────────────────── */
 #controls {
   flex-shrink: 0;
