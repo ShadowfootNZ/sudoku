@@ -43,7 +43,10 @@ export function initInput() {
 
   // ── Pointer events on grid ──────────────────────────────────────────────
   grid.addEventListener('pointerdown', e => {
-    e.preventDefault(); // block text selection + default scroll/zoom
+    // Don't preventDefault for pen — WKWebView may pass that signal to the OS
+    // and suppress Scribble activation. Scroll/zoom prevented by touch-action:none;
+    // text selection prevented by user-select:none.
+    if (e.pointerType !== 'pen') e.preventDefault();
 
     if (e.pointerType === 'pen') {
       penActive = true;

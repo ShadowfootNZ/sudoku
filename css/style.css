@@ -11,6 +11,7 @@
   --hint-color:    #8a3fa8;
   --accent:        #d6eaff;
   --peer-bg:       #eef4ff;
+  --hover-bg:      #d0f0e4;
   --conflict-bg:   #ffe0e0;
   --conflict-color:#c01010;
   --same-digit-bg: #c8e0ff;
@@ -42,6 +43,7 @@
     --hint-color:    #d08aff;
     --accent:        #1e3a5a;
     --peer-bg:       #252538;
+    --hover-bg:      #1a3028;
     --conflict-bg:   #5a1e1e;
     --conflict-color:#ff7070;
     --same-digit-bg: #1a3a5a;
@@ -219,7 +221,7 @@ html, body {
 .cell.hint-cell    { background: var(--hint-cell-bg); }
 .cell.conflict     { background: var(--conflict-bg); }
 .cell.selected     { background: var(--accent); }
-.cell.hover        { background: var(--peer-bg); }
+.cell.hover        { background: var(--hover-bg); }
 
 /* Digit text */
 .digit {
