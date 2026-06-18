@@ -52,8 +52,14 @@ export function initInput() {
       penActive = true;
       clearTimeout(penTimer);
       clearTimeout(touchDebounceTimer);
+      // Capture cell div BEFORE handleCellSelect — that triggers renderAll() which
+      // replaces innerHTML of all cells, detaching any child elements (e.g. .digit
+      // spans). getBoundingClientRect() on a detached element returns all zeros,
+      // which would reposition the scribble input off-screen. The cell div itself
+      // survives renderAll(); only its children are replaced.
+      const cellEl = e.target.closest('[data-cell]');
       handleCellSelect(e);
-      focusScribble(e.target.closest('[data-cell]'));
+      focusScribble(cellEl);
     } else if (e.pointerType === 'touch') {
       if (!penActive) {
         // 50 ms debounce: if the pen fires concurrently (palm landing before
