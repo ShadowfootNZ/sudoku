@@ -108,9 +108,8 @@ export function updateNumpad() {
 }
 
 export function updateHintsDisplay() {
-  const n = state.hintsPointed;
   const el = document.getElementById('hints-display');
-  if (el) el.textContent = `${n} ${n === 1 ? 'Hint' : 'Hints'}`;
+  if (el) el.textContent = `🔍${state.hintsPointed}`;
 }
 
 export function updateRevealsDisplay() {
@@ -121,13 +120,15 @@ export function updateRevealsDisplay() {
 export function updateErrorsDisplay() {
   const n = state.errors;
   const el = document.getElementById('errors-display');
-  if (el) el.textContent = `${n} ${n === 1 ? 'Error' : 'Errors'}`;
+  if (!el) return;
+  el.textContent = `✕${n}`;
+  el.classList.toggle('has-errors', n > 0);
 }
 
 export function updateHintBtn() {
   const btn = document.getElementById('hint-btn');
   if (!btn) return;
-  btn.textContent = state.hintCell !== -1 ? '👁 Peek' : '? Hint';
+  btn.textContent = state.hintCell !== -1 ? '👁 Peek' : '🔍 Hint';
 }
 
 export function setNotesModeUI(active) {

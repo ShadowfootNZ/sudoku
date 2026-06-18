@@ -103,13 +103,6 @@ html, body {
 
 #header-left {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-#header-title {
-  display: flex;
   align-items: center;
   gap: 8px;
 }
@@ -179,10 +172,14 @@ html, body {
 #header-stats {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 14px;
   color: var(--note-color);
   white-space: nowrap;
+}
+
+#errors-display.has-errors {
+  color: var(--conflict-color);
 }
 
 
