@@ -1,5 +1,7 @@
 // Game state: board, notes, undo history, localStorage persistence
 
+import { findHint } from './generator.js';
+
 const EMPTY = 0;
 
 function buildPeers() {
@@ -213,18 +215,12 @@ const state = {
   },
 
   getHint() {
-    if (_s.hintCell !== -1) return; // already have an active hint
-    const nakeds = [];
-    for (let i = 0; i < 81; i++) {
-      if (_s.given[i] || _s.answer[i]) continue;
-      if (validCandidates(i).size === 1) nakeds.push(i);
-    }
-    const pool = nakeds.length > 0
-      ? nakeds
-      : Array.from({ length: 81 }, (_, i) => i)
-          .filter(i => !_s.given[i] && !_s.answer[i]);
-    if (!pool.length) return;
-    _s.hintCell = pool[Math.floor(Math.random() * pool.length)];
+    if (_s.hintCell !== -1) return;
+    const board = _s.given.map((g, i) => g || _s.answer[i]);
+    const result = findHint(board, _s.solution);
+    if (result.type === 'error') { emit('hinterror'); return; }
+    if (result.type === 'stuck') return;
+    _s.hintCell = result.cell;
     _s.hintsPointed++;
     state.selectCell(_s.hintCell);
     state.save();

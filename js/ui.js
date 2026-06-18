@@ -183,9 +183,12 @@ export function showComplete() {
       el.style.animationDelay = '';
     });
     const detailEl = document.getElementById('complete-details');
-    detailEl.textContent = state.hintsUsed === 0
-      ? 'Solved without any hints!'
-      : `Hints used: ${state.hintsUsed}`;
+    const totalHelp = state.hintsUsed + state.hintsPointed;
+    detailEl.textContent = totalHelp === 0
+      ? 'Solved without any help!'
+      : totalHelp <= 2
+        ? 'Solved with a little help'
+        : 'Solved with help';
     showOverlay('complete-dialog');
   }, maxStagger + flashDuration + 80);
 }

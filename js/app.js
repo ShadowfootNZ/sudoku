@@ -8,7 +8,7 @@ import {
   showLoading, showComplete, showResume, showHelp, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
-import { generateComplete, createPuzzle } from './generator.js';
+import { generateGraded } from './generator.js';
 
 function startNewGame(difficulty) {
   hideOverlay();
@@ -17,8 +17,7 @@ function startNewGame(difficulty) {
   // Double rAF ensures the loading screen is painted before generation blocks the thread
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      const solution = generateComplete();
-      const puzzle   = createPuzzle(solution, difficulty);
+      const { puzzle, solution } = generateGraded(difficulty);
       state.newGame(puzzle, solution, difficulty);
       showLoading(false);
       buildGrid();
@@ -64,6 +63,12 @@ function init() {
   });
   document.addEventListener('hintschanged',  () => { updateHintsDisplay(); updateRevealsDisplay(); });
   document.addEventListener('errorschanged', () => updateErrorsDisplay());
+  document.addEventListener('hinterror', () => {
+    const btn = document.getElementById('hint-btn');
+    const prev = btn.textContent;
+    btn.textContent = '⚠️ Fix errors';
+    setTimeout(() => { btn.textContent = prev; }, 1800);
+  });
 
   // ── Button wiring ─────────────────────────────────────────────────────
 
