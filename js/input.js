@@ -120,10 +120,15 @@ export function initInput() {
       // Note: cross-out strokes are often misread as "1" by Scribble OCR — for reliable
       // deletion use the iPadOS scratch-out gesture (rapid zigzag), which sends Backspace.
       if (state.selected !== -1) state.clearCell(state.selected);
-      return;
+    } else {
+      const d = parseInt(digits[digits.length - 1], 10);
+      if (d >= 1 && d <= 9) applyDigit(d);
     }
-    const d = parseInt(digits[digits.length - 1], 10);
-    if (d >= 1 && d <= 9) applyDigit(d);
+
+    // Blur after every Scribble write so iPadOS resets its handwriting session.
+    // Without this, Scribble stays in a "used" state and won't capture the next stroke.
+    // The next pen hover re-focuses via focusScribble(), giving Scribble a clean start.
+    scribble.blur();
   });
 
   scribble.addEventListener('keydown', e => {
