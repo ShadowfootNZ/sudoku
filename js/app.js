@@ -132,6 +132,14 @@ function init() {
     startNewGame(document.getElementById('difficulty-select').value);
   });
 
+  document.getElementById('help-btn').addEventListener('click', () => {
+    showOverlay('help-dialog');
+  });
+
+  document.getElementById('help-close-btn').addEventListener('click', () => {
+    hideOverlay();
+  });
+
   // ── Startup ───────────────────────────────────────────────────────────
 
   if (state.load()) {

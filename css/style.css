@@ -126,6 +126,23 @@ html, body {
   cursor: pointer;
 }
 
+#help-btn {
+  font-size: 16px;
+  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--note-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 #new-game-btn {
   font-size: 15px;
   font-family: inherit;
@@ -469,6 +486,35 @@ html, body {
   color: var(--mode-active-fg);
   cursor: pointer;
   touch-action: manipulation;
+}
+
+/* Help dialog */
+#help-dialog {
+  max-height: 85vh;
+}
+
+#help-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.help-section strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: var(--given-color);
+}
+
+.help-section p {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--note-color);
+  margin: 0;
 }
 
 .dialog-btns button.btn-secondary {

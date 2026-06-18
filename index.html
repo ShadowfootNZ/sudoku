@@ -32,6 +32,7 @@
         <option value="veryhard">Very Hard</option>
       </select>
       <button id="new-game-btn">New Game</button>
+      <button id="help-btn" aria-label="Help">?</button>
     </div>
   </header>
 
@@ -96,6 +97,38 @@
     <p id="complete-details"></p>
     <div class="dialog-btns">
       <button id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+  <div id="help-dialog" class="dialog hidden">
+    <h2>How to Play</h2>
+    <div id="help-content">
+      <div class="help-section">
+        <strong>Hint &amp; Peek</strong>
+        <p>Tap <b>? Hint</b> to highlight a cell the solver recommends as a good next move. The button changes to <b>👁 Peek</b>. Tap Peek to reveal the answer for whichever cell is currently selected — it doesn't have to be the highlighted one. The hint clears once the highlighted cell is filled.</p>
+      </div>
+      <div class="help-section">
+        <strong>Notes Mode</strong>
+        <p>Tap <b>✏ Notes</b> to switch digit buttons from placing an answer to toggling small pencil-mark candidates. Tap again to return to answer mode. Notes are automatically removed when a related cell is filled.</p>
+      </div>
+      <div class="help-section">
+        <strong>Fill Candidates</strong>
+        <p>With a cell selected, tap <b>⊡ Fill</b> to fill that cell's notes with every currently valid digit. With nothing selected, it fills the whole board at once.</p>
+      </div>
+      <div class="help-section">
+        <strong>Conflict Check</strong>
+        <p>Tap <b>⚠ Check</b> to toggle red highlighting. When on, any digit you enter that already appears in the same row, column, or box is highlighted red. This checks only against digits you've entered — not the solution — so an incorrect digit that doesn't duplicate anything won't be flagged.</p>
+      </div>
+      <div class="help-section">
+        <strong>Remaining Count</strong>
+        <p>The small number in the corner of each digit button shows how many of that digit are still to place. The button dims when all 9 are used.</p>
+      </div>
+      <div class="help-section">
+        <strong>Apple Pencil</strong>
+        <p>Tap any cell with the Pencil to select it, then write a digit with Scribble to enter it. The green tint on the selected cell means Scribble is ready to receive handwriting. You can also tap the numpad buttons directly with the Pencil.</p>
+      </div>
+    </div>
+    <div class="dialog-btns">
+      <button id="help-close-btn">Got it</button>
     </div>
   </div>
 </div>
