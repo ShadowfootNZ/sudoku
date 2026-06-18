@@ -457,4 +457,15 @@ html, body {
   height: 1px;
   opacity: 0;
   pointer-events: none;
+  z-index: 10;
+  border-radius: 4px;
+}
+
+/* When focused (Scribble is ready to receive handwriting), show a subtle
+   green tint over the cell so the player knows writing is expected */
+#scribble-input:focus {
+  opacity: 1;
+  background: rgba(52, 199, 89, 0.13);
+  outline: 2px solid rgba(52, 199, 89, 0.55);
+  outline-offset: -2px;
 }
