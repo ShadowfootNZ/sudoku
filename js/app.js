@@ -3,61 +3,15 @@
 import state from './state.js';
 import {
   buildGrid, renderAll, renderPeersOf,
-  updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay, updateTimerDisplay,
+  updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
   updateHintBtn, updateNumpad, setNotesModeUI, setConflictUI,
   showLoading, showComplete, showResume, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
 import { generateComplete, createPuzzle } from './generator.js';
 
-// ── Timer ─────────────────────────────────────────────────────────────────────
-
-let timerElapsed  = 0;    // accumulated ms before the current running segment
-let timerStart    = null; // Date.now() when segment started; null when paused
-let timerInterval = null;
-let gameComplete  = false;
-
-function getElapsedMs() {
-  return timerElapsed + (timerStart !== null ? Date.now() - timerStart : 0);
-}
-
-function startTimer() {
-  if (timerStart !== null || gameComplete) return;
-  timerStart = Date.now();
-  timerInterval = timerInterval ?? setInterval(() => updateTimerDisplay(getElapsedMs()), 1000);
-  updateTimerDisplay(getElapsedMs());
-}
-
-function pauseTimer() {
-  if (timerStart === null) return;
-  timerElapsed += Date.now() - timerStart;
-  timerStart = null;
-  clearInterval(timerInterval);
-  timerInterval = null;
-}
-
-function resetTimer() {
-  pauseTimer();
-  timerElapsed = 0;
-  gameComplete  = false;
-  try { localStorage.removeItem('sudoku-timer'); } catch (_) {}
-  updateTimerDisplay(0);
-}
-
-function saveTimer() {
-  try { localStorage.setItem('sudoku-timer', getElapsedMs()); } catch (_) {}
-}
-
-function loadTimerElapsed() {
-  try {
-    const v = localStorage.getItem('sudoku-timer');
-    timerElapsed = v ? parseInt(v, 10) : 0;
-  } catch (_) { timerElapsed = 0; }
-}
-
 function startNewGame(difficulty) {
   hideOverlay();
-  resetTimer();
   showLoading(true);
 
   // Double rAF ensures the loading screen is painted before generation blocks the thread
@@ -75,7 +29,6 @@ function startNewGame(difficulty) {
       updateHintBtn();
       setNotesModeUI(state.notesMode);
       setConflictUI(state.conflictCheck);
-      startTimer();
     });
   });
 }
@@ -107,22 +60,10 @@ function init() {
   });
 
   document.addEventListener('complete', () => {
-    gameComplete = true;
-    pauseTimer();
-    saveTimer();
     showComplete();
   });
   document.addEventListener('hintschanged',  () => { updateHintsDisplay(); updateRevealsDisplay(); });
   document.addEventListener('errorschanged', () => updateErrorsDisplay());
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      pauseTimer();
-      saveTimer();
-    } else {
-      startTimer();
-    }
-  });
 
   // ── Button wiring ─────────────────────────────────────────────────────
 
@@ -180,9 +121,6 @@ function init() {
     setNotesModeUI(state.notesMode);
     setConflictUI(state.conflictCheck);
     document.getElementById('difficulty-select').value = state.difficulty;
-    loadTimerElapsed();
-    updateTimerDisplay(timerElapsed);
-    startTimer();
   });
 
   document.getElementById('discard-btn').addEventListener('click', () => {
@@ -206,8 +144,6 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
-    loadTimerElapsed();
-    updateTimerDisplay(timerElapsed);
     showResume();
   } else {
     startNewGame('medium');

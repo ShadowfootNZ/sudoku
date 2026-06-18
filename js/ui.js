@@ -124,15 +124,6 @@ export function updateErrorsDisplay() {
   if (el) el.textContent = `${n} ${n === 1 ? 'Error' : 'Errors'}`;
 }
 
-export function updateTimerDisplay(ms) {
-  const el = document.getElementById('timer-display');
-  if (!el) return;
-  const total = Math.floor(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  el.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 export function updateHintBtn() {
   const btn = document.getElementById('hint-btn');
   if (!btn) return;

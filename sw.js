@@ -1,6 +1,6 @@
 // Service worker: cache-first strategy for all static assets
 
-const CACHE = 'sudoku-v14';
+const CACHE = 'sudoku-v15';
 const BASE  = self.registration.scope;
 
 const ASSETS = [

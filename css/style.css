@@ -148,10 +148,6 @@ html, body {
   white-space: nowrap;
 }
 
-#timer-display {
-  font-variant-numeric: tabular-nums;
-  min-width: 32px;
-}
 
 /* ── Main / grid area ───────────────────────────────────────────────────── */
 #main {
