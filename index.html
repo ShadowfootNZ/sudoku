@@ -12,7 +12,7 @@
   <link rel="icon" href="icons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
   <title>Sudoku</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -22,15 +22,17 @@
 
   <header id="header">
     <div id="header-left">
-      <img id="header-icon" src="icons/favicon-192x192.png" alt="" aria-hidden="true">
-      <h1>Sudoku</h1>
-    </div>
-    <div id="header-right">
+      <div id="header-title">
+        <img id="header-icon" src="icons/favicon-192x192.png" alt="" aria-hidden="true">
+        <h1>Sudoku</h1>
+      </div>
       <div id="header-stats">
         <span id="errors-display">0 Errors</span>
         <span id="hints-display">0 Hints</span>
         <span id="reveals-display">👁0</span>
       </div>
+    </div>
+    <div id="header-right">
       <select id="difficulty-select" aria-label="Difficulty">
         <option value="easy">Easy</option>
         <option value="medium" selected>Medium</option>
