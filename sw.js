@@ -1,6 +1,6 @@
 // Service worker: cache-first strategy for all static assets
 
-const CACHE = 'sudoku-v22';
+const CACHE = 'sudoku-v23';
 const BASE  = self.registration.scope;
 
 const ASSETS = [
@@ -21,7 +21,6 @@ const ASSETS = [
   'icons/favicon-32x32.png',
   'icons/favicon-192x192.png',
   'icons/favicon-512x512.png',
-  'icons/apple-touch-icon.png',
 ].map(p => new URL(p, BASE).href);
 
 self.addEventListener('install', e => {
