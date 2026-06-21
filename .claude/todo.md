@@ -8,6 +8,24 @@
 
 ## Requested Features (implement when asked)
 
+- [ ] **Enhanced selection highlighting**  
+  When a digit is selected, augment the existing row/column/box peer highlighting with:
+  - **Same digit cells**: bold the digit (instead of or in addition to the peer highlight colour)
+  - **Legal entry cells**: indicate empty cells where the selected digit is a valid placement
+  - **Notes**: bold the matching candidate number within a note cell (no visual change if that candidate isn't present). A cell could therefore show both a "legal entry" indicator and a bolded note simultaneously.
+
+- [ ] **Custom puzzle builder**  
+  Let the user enter a puzzle copied from an external source (newspaper, app, website) and solve it in this app. UI: a grid entry mode where tapping cells cycles through digits 1–9 (or uses the numpad/pencil), distinct from normal play. On confirm, validate the puzzle:
+  - Has exactly one solution (reuse `countSolutions()`)
+  - Is not already solved
+  If invalid, show an error explaining why. On success, start a normal game with those givens (no difficulty label, or label as "Custom").
+
+- [ ] **Puzzle solver**  
+  Needed to support custom puzzles and useful standalone. Given the current puzzle state, solve it using the backtracking solver and fill all empty cells. Should work on both generated and custom puzzles. Could be surfaced as a "Solve" option in the hint/peek system or as a separate button (possibly behind a confirmation since it replaces the challenge).
+
+- [ ] **Hint strategy name**  
+  When the 🔍 Hint button highlights a constrained cell, also display what technique identified it — e.g. "Naked Single", "Hidden Pair", "X-Wing". Requires the hint logic to return a technique label alongside the cell index. Depends on / complements the technique-based difficulty grading feature.
+
 - [ ] **Technique-based difficulty grading** (big feature)  
   Replace the current clue-count difficulty system with one based on what solving techniques are actually required. The current system (easy=36 clues, medium=30, hard=25, veryhard=22) is a rough proxy — two puzzles with the same clue count can have wildly different solving experiences.
 
