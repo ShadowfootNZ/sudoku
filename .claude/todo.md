@@ -11,6 +11,8 @@
 
 - [ ] **Investigate Dancing Links (DLX) for puzzle generation** — Donald Knuth's Algorithm X implemented with Dancing Links is the standard fast approach for exact cover problems, which Sudoku generation/solving maps onto naturally. Current backtracking solver works but DLX may offer faster generation (especially for hard/veryhard) and cleaner architecture. Worth evaluating if generation speed becomes an issue or when tackling technique-based grading.
 
+- [ ] **Fix gold completion animation when hints were used** — the gold flash reward animation plays even when the player used hints or peeks. Consider suppressing or replacing the animation (e.g. no animation, or a muted colour) when `hintsPointed > 0` or `hintsUsed > 0`.
+
 - [ ] **Clear settings** — add a way to reset all settings to defaults. Could be a "Reset to defaults" button in the Settings dialog, or clearing the `sudoku-settings` localStorage key. Needed because changing code defaults doesn't affect existing users with saved settings.
 
 - [ ] **Enhanced selection highlighting**  
