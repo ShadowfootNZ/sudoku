@@ -247,7 +247,7 @@ html, body {
 .cell:nth-child(n+46):nth-child(-n+54) {
   border-bottom: 2px solid var(--border-thick);
 }
-
+ 
 /* Cell state backgrounds */
 .cell.given        { background: var(--given-bg); }
 .cell.peer         { background: var(--peer-bg); }
