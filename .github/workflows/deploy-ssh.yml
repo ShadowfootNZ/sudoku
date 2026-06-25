@@ -23,12 +23,11 @@ jobs:
       - name: Deploy files
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p '${{ secrets.REMOTE_PATH }}'"
-          tar \
-           --exclude='.git' \
-           --exclude='.github' \
-           --exclude='.claude' \
-           --exclude='.gitignore' \
-           --exclude='README.md' \
-           --exclude='notes' \
-           --exclude='*.md' \
-           -czf - . | ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "tar -xzf - -C '${{ secrets.REMOTE_PATH }}'"
+          tar -czf - \
+           index.html \
+           sw.js \
+           manifest.json \
+           css/ \
+           js/ \
+           icons/ \
+           | ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "tar -xzf - -C '${{ secrets.REMOTE_PATH }}'"
