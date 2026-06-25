@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Read(//c/Users/Brian/.claude/projects/c--Users-Brian-Projects-sudoku/memory/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Brian\\.claude\\projects\\c--Users-Brian-Projects-sudoku\\memory"
     ]
   }
 }
