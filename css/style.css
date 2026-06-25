@@ -675,6 +675,21 @@ html, body {
   border-color: var(--mode-active);
 }
 
+.settings-action-btn {
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
 /* ── Scribble sink (off-screen, must not be display:none) ───────────────── */
 #scribble-input {
   position: fixed;

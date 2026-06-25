@@ -49,7 +49,22 @@ function init() {
 
   // PWA service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        function showUpdateAvailable(sw) {
+          document.getElementById('settings-app-group').hidden = false;
+          document.getElementById('settings-update-btn').onclick = () => sw.postMessage('SKIP_WAITING');
+        }
+        if (reg.waiting) showUpdateAvailable(reg.waiting);
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) showUpdateAvailable(sw);
+          });
+        });
+      })
+      .catch(() => {});
+    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
   }
 
   buildGrid();

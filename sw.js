@@ -1,6 +1,6 @@
 // Service worker: cache-first strategy for all static assets
 
-const CACHE = 'sudoku-v28';
+const CACHE = 'sudoku-v29';
 const BASE  = self.registration.scope;
 
 const ASSETS = [
@@ -28,7 +28,11 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(c => c.addAll(ASSETS))
   );
-  self.skipWaiting();
+  // No skipWaiting here — new SW waits until user approves update via settings
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {

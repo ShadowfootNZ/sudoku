@@ -48,6 +48,7 @@ sudoku/
 - `complete` → `showComplete()` (completion animation then dialog)
 - `hintschanged` → `updateHintsDisplay()` + `updateRevealsDisplay()` + `updateHintBtn()`
 - `errorschanged` → `updateErrorsDisplay()`
+- `settingschange` → `renderAll()` + `updateHintTechnique()`
 
 ### Generator
 Runs synchronously on main thread (NOT a Web Worker — module Workers failed silently in Safari and Firefox). Wrapped in double `requestAnimationFrame` in `startNewGame()` so the browser paints the loading screen before the synchronous work blocks the thread.
@@ -75,11 +76,17 @@ Difficulty clue counts: easy=36, medium=30, hard=25, veryhard=22.
 
 ### Hint / Peek System
 Single `🔍 Hint` button with two modes:
-- **Hint mode** (`🔍 Hint`): finds a naked-single or constrained empty cell, highlights it yellow (`hintCell`), increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
-- **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`. `hintCell` is cleared only when the hinted cell has a value — so peeking a different cell leaves the hint active.
-- `hintCell` is also cleared when the player fills it themselves (in `setValue()`).
-- Undo restores `hintCell` (it's in the history snapshot alongside `hintsUsed`).
+- **Hint mode** (`🔍 Hint`): calls `findHint()` in `generator.js`, which runs the full technique cascade (Naked Single → Hidden Single → Pointing → Box-Line → Naked Pair → Hidden Pair → Naked Triple → X-Wing) and returns `{ type, cell }`. Stores `hintCell` (index) and `hintTechnique` (string key e.g. `'naked-single'`). Increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
+- **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`. `hintCell`/`hintTechnique` cleared only when the hinted cell has a value.
+- `hintCell`/`hintTechnique` also cleared when the player fills that cell themselves (in `setValue()`).
+- Undo restores both `hintCell` and `hintTechnique` (both in the history snapshot).
 - Header shows: `🔍N` (pointer count) · `👁N` (reveal count) — both hidden when 0.
+
+### Hint Technique Pill
+When `settings.showStrategyOnHint` is true, a dismissible pill floats above the controls showing the technique name (mapped from the `hintTechnique` key via `TECHNIQUE_LABELS` in `ui.js`).
+- Element: `#hint-technique` at body level (sibling of `#app`), `position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 184px)` — keeps it above `#controls` on all devices.
+- Close button (`#hint-technique-close`) sets `_techniqueDismissed = true` in `ui.js`; next hint resets the flag.
+- **Known issue**: pill not appearing on iPad Safari — root cause unresolved as of SW v28. On-device console debugging needed.
 
 ### Header Stats
 Three emoji counters, all hidden when zero (using HTML `hidden` attribute set in JS):
@@ -120,50 +127,28 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 
 ## Settings
 
-A ⚙️ button in the header (next to `?`) opens a settings dialog using the existing overlay/dialog system.
+**Implemented.** ⚙️ button in `#mode-controls` opens a settings dialog using the existing overlay/dialog system. `js/settings.js` holds defaults and persists to `sudoku-settings` localStorage key.
 
-### Storage
-Settings live in a separate `sudoku-settings` localStorage key so they survive new games:
+### Current settings schema
 ```json
 {
-  "conflictCheck":       true,
-  "highlightSameDigit":  true,
-  "highlightLegalEntry": true,
-  "highlightNotes":      true,
-  "fontSize":            "medium"
+  "highlightPeers":     false,
+  "highlightMatches":   true,
+  "highlightLegal":     false,
+  "conflictCheck":      true,
+  "fontSize":           "medium",
+  "showStrategyOnHint": false
 }
 ```
-`conflictCheck` migrates here from the game save (keep reading it from the game save for backwards compat; write it to both during transition, or just move it cleanly).
 
-### Font size
-Three steps — Small (0.8×), Medium (1.0×), Large (1.25×) — implemented as a CSS custom property:
-```css
-:root { --font-scale: 1; }
-```
-Set on `<html>` via JS on load and on change:
-```js
-document.documentElement.style.setProperty('--font-scale', scale);
-```
-Font rules use `calc()`:
-```css
-.digit { font-size: max(14px, calc(var(--font-scale) * 5cqmin)); }
-.note  { font-size: max(9px,  calc(var(--font-scale) * 3cqmin)); }
-```
-
-### Highlight toggles
-Each highlight toggle (same-digit, legal-entry, note) is a boolean in the settings object. In `renderCell`, pass the settings through to the class/HTML logic — skip adding the CSS class when the toggle is off. No CSS-override tricks needed.
-
-`ui.js` imports a `settings` module (similar pattern to `state.js`) that exposes the current values and a `set(key, value)` method that persists and triggers a `renderAll()`.
+### Defaults note
+Changing defaults in `settings.js` only affects fresh installs (no prior `sudoku-settings` in localStorage). Existing users keep their saved values. A "Reset to defaults" button (planned — see todo) will let users clear their saved settings.
 
 ### Dialog UI
-Reuse the existing overlay/dialog structure. Controls:
-- Toggle rows (label + iOS-style checkbox or simple toggle button) for the four on/off settings
-- Segmented control or three buttons for font size
-- "Done" button closes the dialog
-
-### Header change
-- Add `<button id="settings-btn">⚙️</button>` next to `#help-btn`
-- Remove `✅ Check` from `#mode-controls` (now a 4-button row: Notes, Undo, Fill, Hint/Peek)
+- **Font Size**: segmented control (Small/Medium/Large), `.seg-btn[data-key][data-value]`
+- **Highlights group**: toggle rows for peers, matches, legal, errors — `.toggle-btn[data-key]`
+- **Hints group**: toggle row for `showStrategyOnHint`
+- `updateSettingsDialog()` in `app.js` syncs button states on open
 
 ---
 
@@ -200,8 +185,9 @@ Reuse the existing overlay/dialog structure. Controls:
 - Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v26`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v29`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
+- **Update flow**: install handler does NOT call `skipWaiting()`. New SW installs, then waits. App detects `reg.waiting` (or `updatefound` → `statechange === 'installed'`) and shows "Update available" row in Settings → App group. User taps "Update" → `postMessage('SKIP_WAITING')` → SW activates → `controllerchange` → `location.reload()`. Settings (localStorage) survive the reload.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
 - **Browser favicon**: footprint icons (`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`).
 - **iPad/iPhone home screen** (`apple-touch-icon`): `icons/icon-512.png` — the sudoku image, NOT the footprint.
