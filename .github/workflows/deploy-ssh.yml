@@ -22,9 +22,5 @@ jobs:
 
       - name: Deploy files
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p '${{ secrets.REMOTE_PATH }}'"
-          scp -i ~/.ssh/deploy_key -r \
-            index.html \
-            *.css \
-            *.js \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.REMOTE_PATH }}/
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p '${{ secrets.REMOTE_PATH }}'"
+          tar --exclude='.git' --exclude='.github' -czf - . | ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "tar -xzf - -C '${{ secrets.REMOTE_PATH }}'"
