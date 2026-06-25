@@ -449,6 +449,40 @@ html, body {
   opacity: 0.7;
 }
 
+#hint-technique {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--hint-cell-bg);
+  border: 1px solid var(--border-thin);
+  border-radius: 20px;
+  padding: 5px 8px 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--given-color);
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+#hint-technique-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--note-color);
+  padding: 0 2px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* ── Overlay + dialogs ──────────────────────────────────────────────────── */
 #overlay {
   position: fixed;

@@ -3,12 +3,12 @@
 const FONT_SCALE = { small: 0.8, medium: 1.0, large: 1.25 };
 
 const DEFAULTS = {
-  highlightPeers:     true,   // row / column / box peer tint
+  highlightPeers:     false,   // row / column / box peer tint
   highlightMatches:   true,   // same-digit bold + matching note highlight
-  highlightLegal:     true,   // legal placement tint
+  highlightLegal:     false,   // legal placement tint
   conflictCheck:      true,   // error / conflict highlighting
   fontSize:           'medium',
-  showStrategyOnHint: true,   // show technique name alongside hint (future)
+  showStrategyOnHint: false,   // show technique name alongside hint (future)
 };
 
 const _s = { ...DEFAULTS };

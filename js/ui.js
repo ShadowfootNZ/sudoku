@@ -147,6 +147,40 @@ export function updateHintBtn() {
   btn.textContent = state.hintCell !== -1 ? '👁 Peek' : '🔍 Hint';
 }
 
+const TECHNIQUE_LABELS = {
+  'naked-single':  'Naked Single',
+  'hidden-single': 'Hidden Single',
+  'naked-pair':    'Naked Pair',
+  'naked-triple':  'Naked Triple',
+  'hidden-pair':   'Hidden Pair',
+  'pointing':      'Pointing Pair/Triple',
+  'box-line':      'Box-Line Reduction',
+  'x-wing':        'X-Wing',
+};
+
+let _techniqueDismissed = false;
+
+export function updateHintTechnique() {
+  const el = document.getElementById('hint-technique');
+  if (!el) return;
+  const tech = state.hintTechnique;
+  if (!tech) {
+    _techniqueDismissed = false;
+    el.hidden = true;
+    return;
+  }
+  if (_techniqueDismissed) return;
+  const label = settings.showStrategyOnHint ? (TECHNIQUE_LABELS[tech] ?? tech) : null;
+  document.getElementById('hint-technique-label').textContent = label ?? '';
+  el.hidden = !label;
+}
+
+export function dismissHintTechnique() {
+  _techniqueDismissed = true;
+  const el = document.getElementById('hint-technique');
+  if (el) el.hidden = true;
+}
+
 export function setNotesModeUI(active) {
   document.getElementById('notes-btn').classList.toggle('active', active);
 }

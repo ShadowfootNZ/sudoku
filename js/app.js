@@ -5,7 +5,7 @@ import settings from './settings.js';
 import {
   buildGrid, renderAll, renderPeersOf,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
-  updateHintBtn, updateNumpad, setNotesModeUI,
+  updateHintBtn, updateHintTechnique, dismissHintTechnique, updateNumpad, setNotesModeUI,
   showLoading, showComplete, showResume, showSettings, showHelp, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
@@ -27,6 +27,7 @@ function startNewGame(difficulty) {
       updateErrorsDisplay();
       updateNumpad();
       updateHintBtn();
+      updateHintTechnique();
       setNotesModeUI(state.notesMode);
     });
   });
@@ -65,6 +66,7 @@ function init() {
     updateHintsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateHintTechnique();
   });
 
   document.addEventListener('selectionchange', () => {
@@ -78,6 +80,7 @@ function init() {
   document.addEventListener('errorschanged', () => updateErrorsDisplay());
   document.addEventListener('settingschange', () => {
     renderAll();
+    updateHintTechnique();
   });
 
   document.addEventListener('hinterror', () => {
@@ -158,6 +161,7 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateHintTechnique();
     setNotesModeUI(state.notesMode);
     document.getElementById('difficulty-select').value = state.difficulty;
   });
@@ -170,6 +174,8 @@ function init() {
   document.getElementById('play-again-btn').addEventListener('click', () => {
     startNewGame(document.getElementById('difficulty-select').value);
   });
+
+  document.getElementById('hint-technique-close').addEventListener('click', dismissHintTechnique);
 
   document.getElementById('help-btn').addEventListener('click', () => {
     showHelp();
@@ -190,6 +196,7 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateHintTechnique();
     showResume();
   } else {
     startNewGame('medium');

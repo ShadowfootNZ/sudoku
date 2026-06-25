@@ -28,7 +28,8 @@ const _s = {
   notes:        Array.from({ length: 81 }, () => new Set()),
   solution:     new Array(81).fill(EMPTY),
   selected:     -1,
-  hintCell:     -1,
+  hintCell:      -1,
+  hintTechnique: null,
   history:      [],
   redoStack:    [],
   notesMode:    false,
@@ -68,20 +69,22 @@ function pruneAllCandidates() {
 
 function snapshot() {
   return {
-    answer:    [..._s.answer],
-    notes:     _s.notes.map(s => new Set(s)),
-    hintCell:  _s.hintCell,
-    hintsUsed: _s.hintsUsed,
-    fillOrder: [..._s.fillOrder],
+    answer:        [..._s.answer],
+    notes:         _s.notes.map(s => new Set(s)),
+    hintCell:      _s.hintCell,
+    hintTechnique: _s.hintTechnique,
+    hintsUsed:     _s.hintsUsed,
+    fillOrder:     [..._s.fillOrder],
   };
 }
 
 function restoreSnapshot(snap) {
-  _s.answer    = snap.answer;
-  _s.notes     = snap.notes;
-  _s.hintCell  = snap.hintCell;
-  _s.hintsUsed = snap.hintsUsed;
-  _s.fillOrder = snap.fillOrder ?? [];
+  _s.answer        = snap.answer;
+  _s.notes         = snap.notes;
+  _s.hintCell      = snap.hintCell;
+  _s.hintTechnique = snap.hintTechnique ?? null;
+  _s.hintsUsed     = snap.hintsUsed;
+  _s.fillOrder     = snap.fillOrder ?? [];
 }
 
 function pushHistory() {
@@ -92,7 +95,8 @@ function pushHistory() {
 
 const state = {
   get selected()     { return _s.selected; },
-  get hintCell()     { return _s.hintCell; },
+  get hintCell()      { return _s.hintCell; },
+  get hintTechnique() { return _s.hintTechnique; },
   get hintsUsed()     { return _s.hintsUsed; },
   get hintsPointed()  { return _s.hintsPointed; },
   get errors()        { return _s.errors; },
@@ -111,7 +115,8 @@ const state = {
     _s.notes       = Array.from({ length: 81 }, () => new Set());
     _s.solution    = [...solution];
     _s.selected    = -1;
-    _s.hintCell    = -1;
+    _s.hintCell      = -1;
+    _s.hintTechnique = null;
     _s.history     = [];
     _s.redoStack   = [];
     _s.difficulty  = difficulty;
@@ -138,7 +143,7 @@ const state = {
       emit('errorschanged');
     }
     _s.answer[cell] = digit;
-    if (_s.hintCell === cell) _s.hintCell = -1;
+    if (_s.hintCell === cell) { _s.hintCell = -1; _s.hintTechnique = null; }
     _s.notes[cell].clear();
     const fo1 = _s.fillOrder.indexOf(cell);
     if (fo1 !== -1) _s.fillOrder.splice(fo1, 1);
@@ -214,7 +219,8 @@ const state = {
     const result = findHint(board, _s.solution);
     if (result.type === 'error') { emit('hinterror'); return; }
     if (result.type === 'stuck') return;
-    _s.hintCell = result.cell;
+    _s.hintCell      = result.cell;
+    _s.hintTechnique = result.type;
     _s.hintsPointed++;
     state.selectCell(_s.hintCell);
     state.save();
@@ -235,6 +241,7 @@ const state = {
     // Clear the active hint if the hinted cell now has a value
     if (_s.hintCell !== -1 && (_s.given[_s.hintCell] || _s.answer[_s.hintCell])) {
       _s.hintCell = -1;
+      _s.hintTechnique = null;
     }
     state.save();
     emit('statechange', { cell });
