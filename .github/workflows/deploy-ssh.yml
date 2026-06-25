@@ -22,9 +22,9 @@ jobs:
 
       - name: Deploy files
         run: |
-          rsync -avz --delete \
-            --exclude ".git/" \
-            --exclude ".github/" \
-            -e "ssh -i ~/.ssh/deploy_key" \
-            ./ \
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p '${{ secrets.REMOTE_PATH }}'"
+          scp -i ~/.ssh/deploy_key -r \
+            index.html \
+            *.css \
+            *.js \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.REMOTE_PATH }}/
