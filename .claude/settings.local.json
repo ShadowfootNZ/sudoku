@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" init)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" remote add origin https://github.com/ShadowfootNZ/sudoku.git)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" fetch origin)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" branch -a)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" remote -v)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" ls-remote origin)",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\\\\css\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\\\\js\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\\\\icons\")",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" checkout -b main)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" add index.html manifest.json sw.js css/style.css js/generator.js js/worker.js js/state.js js/ui.js js/input.js js/app.js icons/icon-192.png icons/icon-512.png)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" status)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" push -u origin main)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" add js/app.js css/style.css)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" diff --staged --stat)",
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" push)"
+    ]
+  }
+}

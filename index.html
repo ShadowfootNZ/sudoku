@@ -70,7 +70,7 @@
       <button id="undo-btn"     class="mode-btn" title="Undo">↩️ Undo</button>
       <button id="fill-btn"     class="mode-btn" title="Fill candidates">✍️ Fill</button>
       <button id="hint-btn"     class="mode-btn" title="Hint">🔍 Hint</button>
-      <button id="conflict-btn" class="mode-btn active" title="Toggle conflict check">✅ Check</button>
+      <button id="settings-btn" class="mode-btn" title="Settings">⚙️ Settings</button>
     </div>
   </div>
 
@@ -105,6 +105,51 @@
       <button id="play-again-btn">Play Again</button>
     </div>
   </div>
+  <div id="settings-dialog" class="dialog hidden">
+      <h2>Settings</h2>
+      <div id="settings-content">
+        <div class="settings-group">
+          <div class="settings-group-title">Font Size</div>
+          <div class="settings-row">
+            <span>Text size</span>
+            <div class="settings-seg">
+              <button class="seg-btn" data-key="fontSize" data-value="small">Small</button>
+              <button class="seg-btn" data-key="fontSize" data-value="medium">Medium</button>
+              <button class="seg-btn" data-key="fontSize" data-value="large">Large</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-group-title">Highlights</div>
+          <div class="settings-row">
+            <span>Row, column &amp; box</span>
+            <button class="toggle-btn" data-key="highlightPeers"></button>
+          </div>
+          <div class="settings-row">
+            <span>Matching numbers</span>
+            <button class="toggle-btn" data-key="highlightMatches"></button>
+          </div>
+          <div class="settings-row">
+            <span>Legal placements</span>
+            <button class="toggle-btn" data-key="highlightLegal"></button>
+          </div>
+          <div class="settings-row">
+            <span>Errors</span>
+            <button class="toggle-btn" data-key="conflictCheck"></button>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-group-title">Hints</div>
+          <div class="settings-row">
+            <span>Show strategy name</span>
+            <button class="toggle-btn" data-key="showStrategyOnHint"></button>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-btns">
+        <button id="settings-close-btn">Done</button>
+      </div>
+    </div>
   <div id="help-dialog" class="dialog hidden">
     <h2>How to Play</h2>
     <div id="help-content">
@@ -122,7 +167,7 @@
       </div>
       <div class="help-section">
         <strong>Conflict Check</strong>
-        <p>Tap <b>✅ Check</b> to toggle red highlighting. When on, any digit you enter that already appears in the same row, column, or box is highlighted red. This checks only against digits you've entered — not the solution — so an incorrect digit that doesn't duplicate anything won't be flagged.</p>
+        <p>In <b>⚙️ Settings</b>, turn <b>Errors</b> on to highlight conflicting digits in red. When on, any digit you enter that already appears in the same row, column, or box is highlighted red. This checks only against digits you've entered — not the solution — so an incorrect digit that doesn't duplicate anything won't be flagged.</p>
       </div>
       <div class="help-section">
         <strong>Remaining Count</strong>

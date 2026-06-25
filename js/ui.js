@@ -1,6 +1,7 @@
 // DOM rendering: grid cells and all visual state
 
 import state from './state.js';
+import settings from './settings.js';
 
 let cells = [];
 
@@ -37,11 +38,16 @@ export function renderCell(i) {
   const answer = s.answer[i];
   const notes  = s.notes[i];
 
+  // Digit in the selected cell (0 when no selection or selected cell is empty)
+  const selVal = s.selected !== -1
+    ? (s.given[s.selected] || s.answer[s.selected])
+    : 0;
+
   if (given) {
     cls.push('given');
   } else if (answer) {
     cls.push('user');
-    if (s.conflictCheck && state.isConflict(i, answer)) cls.push('conflict');
+    if (settings.conflictCheck && state.isConflict(i, answer)) cls.push('conflict');
   }
 
   if (i === s.selected) {
@@ -53,12 +59,14 @@ export function renderCell(i) {
     const ir = Math.floor(i / 9),          ic = i % 9;
     const sameBox = Math.floor(sr / 3) === Math.floor(ir / 3) &&
                     Math.floor(sc / 3) === Math.floor(ic / 3);
-    if (sr === ir || sc === ic || sameBox) cls.push('peer');
+    if (settings.highlightPeers && (sr === ir || sc === ic || sameBox)) cls.push('peer');
 
-    // Highlight cells sharing the same digit as the selected cell
-    const selVal = s.given[s.selected] || s.answer[s.selected];
-    const iVal   = given || answer;
-    if (selVal && selVal === iVal) cls.push('same-digit');
+    const iVal = given || answer;
+    if (settings.highlightMatches && selVal && selVal === iVal) cls.push('same-digit');
+
+    if (settings.highlightLegal && selVal && !given && !answer && !state.isConflict(i, selVal)) {
+      cls.push('legal-entry');
+    }
   }
 
   el.className = cls.join(' ');
@@ -69,7 +77,9 @@ export function renderCell(i) {
   } else if (notes.size > 0) {
     let html = '<div class="notes-grid">';
     for (let d = 1; d <= 9; d++) {
-      html += `<span class="note${notes.has(d) ? ' on' : ''}">${notes.has(d) ? d : ''}</span>`;
+      const on = notes.has(d);
+      const hl = settings.highlightMatches && on && selVal === d;
+      html += `<span class="note${on ? ' on' : ''}${hl ? ' highlighted' : ''}">${on ? d : ''}</span>`;
     }
     html += '</div>';
     el.innerHTML = html;
@@ -141,10 +151,6 @@ export function setNotesModeUI(active) {
   document.getElementById('notes-btn').classList.toggle('active', active);
 }
 
-export function setConflictUI(active) {
-  document.getElementById('conflict-btn').classList.toggle('active', active);
-}
-
 export function showLoading(show) {
   document.getElementById('loading').hidden  = !show;
   document.getElementById('grid').style.visibility = show ? 'hidden' : 'visible';
@@ -195,6 +201,10 @@ export function showComplete() {
 
 export function showResume() {
   showOverlay('resume-dialog');
+}
+
+export function showSettings() {
+  showOverlay('settings-dialog');
 }
 
 export function showHelp() {

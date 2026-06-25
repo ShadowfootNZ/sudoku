@@ -1,11 +1,12 @@
 // Entry point: wires all modules together
 
 import state from './state.js';
+import settings from './settings.js';
 import {
   buildGrid, renderAll, renderPeersOf,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
-  updateHintBtn, updateNumpad, setNotesModeUI, setConflictUI,
-  showLoading, showComplete, showResume, showHelp, hideOverlay,
+  updateHintBtn, updateNumpad, setNotesModeUI,
+  showLoading, showComplete, showResume, showSettings, showHelp, hideOverlay,
 } from './ui.js';
 import { initInput } from './input.js';
 import { generateGraded } from './generator.js';
@@ -27,12 +28,24 @@ function startNewGame(difficulty) {
       updateNumpad();
       updateHintBtn();
       setNotesModeUI(state.notesMode);
-      setConflictUI(state.conflictCheck);
     });
   });
 }
 
+function updateSettingsDialog() {
+  document.querySelectorAll('.toggle-btn[data-key]').forEach(btn => {
+    const val = settings[btn.dataset.key];
+    btn.classList.toggle('active', !!val);
+    btn.textContent = val ? 'On' : 'Off';
+  });
+  document.querySelectorAll('.seg-btn[data-key]').forEach(btn => {
+    btn.classList.toggle('active', settings[btn.dataset.key] === btn.dataset.value);
+  });
+}
+
 function init() {
+  settings.load();
+
   // PWA service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -44,7 +57,7 @@ function init() {
   // ── State event listeners ─────────────────────────────────────────────
 
   document.addEventListener('statechange', ({ detail }) => {
-    if (detail.all) {
+    if (detail.all || detail.cell === state.selected) {
       renderAll();
     } else if (detail.cell !== undefined) {
       renderPeersOf(detail.cell);
@@ -63,6 +76,10 @@ function init() {
   });
   document.addEventListener('hintschanged',  () => { updateHintsDisplay(); updateRevealsDisplay(); });
   document.addEventListener('errorschanged', () => updateErrorsDisplay());
+  document.addEventListener('settingschange', () => {
+    renderAll();
+  });
+
   document.addEventListener('hinterror', () => {
     const btn = document.getElementById('hint-btn');
     const prev = btn.textContent;
@@ -96,9 +113,27 @@ function init() {
     }
   });
 
-  document.getElementById('conflict-btn').addEventListener('click', () => {
-    state.conflictCheck = !state.conflictCheck;
-    setConflictUI(state.conflictCheck);
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    updateSettingsDialog();
+    showSettings();
+  });
+
+  document.getElementById('settings-close-btn').addEventListener('click', () => {
+    hideOverlay();
+  });
+
+  document.querySelectorAll('.toggle-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.set(btn.dataset.key, !settings[btn.dataset.key]);
+      updateSettingsDialog();
+    });
+  });
+
+  document.querySelectorAll('.seg-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.set(btn.dataset.key, btn.dataset.value);
+      updateSettingsDialog();
+    });
   });
 
   document.getElementById('delete-btn').addEventListener('click', () => {
@@ -124,7 +159,6 @@ function init() {
     updateNumpad();
     updateHintBtn();
     setNotesModeUI(state.notesMode);
-    setConflictUI(state.conflictCheck);
     document.getElementById('difficulty-select').value = state.difficulty;
   });
 
@@ -150,7 +184,6 @@ function init() {
   if (state.load()) {
     document.getElementById('difficulty-select').value = state.difficulty;
     setNotesModeUI(state.notesMode);
-    setConflictUI(state.conflictCheck);
     buildGrid();
     updateHintsDisplay();
     updateRevealsDisplay();

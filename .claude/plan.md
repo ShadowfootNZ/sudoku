@@ -118,6 +118,55 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 
 ---
 
+## Settings
+
+A ⚙️ button in the header (next to `?`) opens a settings dialog using the existing overlay/dialog system.
+
+### Storage
+Settings live in a separate `sudoku-settings` localStorage key so they survive new games:
+```json
+{
+  "conflictCheck":       true,
+  "highlightSameDigit":  true,
+  "highlightLegalEntry": true,
+  "highlightNotes":      true,
+  "fontSize":            "medium"
+}
+```
+`conflictCheck` migrates here from the game save (keep reading it from the game save for backwards compat; write it to both during transition, or just move it cleanly).
+
+### Font size
+Three steps — Small (0.8×), Medium (1.0×), Large (1.25×) — implemented as a CSS custom property:
+```css
+:root { --font-scale: 1; }
+```
+Set on `<html>` via JS on load and on change:
+```js
+document.documentElement.style.setProperty('--font-scale', scale);
+```
+Font rules use `calc()`:
+```css
+.digit { font-size: max(14px, calc(var(--font-scale) * 5cqmin)); }
+.note  { font-size: max(9px,  calc(var(--font-scale) * 3cqmin)); }
+```
+
+### Highlight toggles
+Each highlight toggle (same-digit, legal-entry, note) is a boolean in the settings object. In `renderCell`, pass the settings through to the class/HTML logic — skip adding the CSS class when the toggle is off. No CSS-override tricks needed.
+
+`ui.js` imports a `settings` module (similar pattern to `state.js`) that exposes the current values and a `set(key, value)` method that persists and triggers a `renderAll()`.
+
+### Dialog UI
+Reuse the existing overlay/dialog structure. Controls:
+- Toggle rows (label + iOS-style checkbox or simple toggle button) for the four on/off settings
+- Segmented control or three buttons for font size
+- "Done" button closes the dialog
+
+### Header change
+- Add `<button id="settings-btn">⚙️</button>` next to `#help-btn`
+- Remove `✅ Check` from `#mode-controls` (now a 4-button row: Notes, Undo, Fill, Hint/Peek)
+
+---
+
 ## Key Bugs Fixed (history)
 
 | Bug | Root cause | Fix |
@@ -151,7 +200,7 @@ Hidden `<input id="scribble-input">` — `position: fixed`, repositioned over th
 - Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v23`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v26`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
 - **Browser favicon**: footprint icons (`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`).

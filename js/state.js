@@ -1,6 +1,7 @@
 // Game state: board, notes, undo history, localStorage persistence
 
 import { findHint } from './generator.js';
+import settings from './settings.js';
 
 const EMPTY = 0;
 
@@ -31,7 +32,6 @@ const _s = {
   history:      [],
   redoStack:    [],
   notesMode:    false,
-  conflictCheck: true,
   hintsUsed:    0,
   hintsPointed: 0,
   errors:       0,
@@ -98,18 +98,12 @@ const state = {
   get errors()        { return _s.errors; },
   get difficulty()   { return _s.difficulty; },
   get notesMode()    { return _s.notesMode; },
-  get conflictCheck(){ return _s.conflictCheck; },
   get fillOrder()    { return _s.fillOrder; },
   get raw()          { return _s; },
   PEERS,
   isConflict,
 
   set notesMode(v)     { _s.notesMode = v;     state.save(); },
-  set conflictCheck(v) {
-    _s.conflictCheck = v;
-    state.save();
-    emit('statechange', { all: true });
-  },
 
   newGame(puzzle, solution, difficulty) {
     _s.given       = [...puzzle];
@@ -139,7 +133,7 @@ const state = {
   setValue(cell, digit) {
     if (_s.given[cell]) return;
     pushHistory();
-    if (_s.conflictCheck && _s.answer[cell] !== digit && isConflict(cell, digit)) {
+    if (settings.conflictCheck && _s.answer[cell] !== digit && isConflict(cell, digit)) {
       _s.errors++;
       emit('errorschanged');
     }
@@ -264,7 +258,6 @@ const state = {
         notes:         _s.notes.map(s => [...s]),
         solution:      _s.solution,
         difficulty:    _s.difficulty,
-        conflictCheck: _s.conflictCheck,
         notesMode:     _s.notesMode,
         hintsUsed:     _s.hintsUsed,
         hintsPointed:  _s.hintsPointed,
@@ -286,7 +279,6 @@ const state = {
       _s.notes         = d.notes.map(a => new Set(a));
       _s.solution      = d.solution;
       _s.difficulty    = d.difficulty    ?? 'medium';
-      _s.conflictCheck = d.conflictCheck ?? true;
       _s.notesMode     = d.notesMode     ?? false;
       _s.hintsUsed     = d.hintsUsed     ?? 0;
       _s.hintsPointed  = d.hintsPointed  ?? 0;

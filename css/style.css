@@ -15,6 +15,7 @@
   --conflict-bg:   #ffe0e0;
   --conflict-color:#c01010;
   --same-digit-bg: #c8e0ff;
+  --legal-entry-bg:#ddf4f8;
   --hint-cell-bg:  #fff3c0;
   --note-color:    #4a4a5a;
   --btn-bg:        #ffffff;
@@ -28,6 +29,7 @@
   --overlay-bg:    rgba(0,0,0,0.45);
   --shadow:        0 2px 12px rgba(0,0,0,0.15);
   --radius:        10px;
+  --font-scale:    1;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +49,7 @@
     --conflict-bg:   #5a1e1e;
     --conflict-color:#ff7070;
     --same-digit-bg: #1a3a5a;
+    --legal-entry-bg:#0d2228;
     --hint-cell-bg:  #4a3a00;
     --note-color:    #aaaabc;
     --btn-bg:        #3a3a3c;
@@ -207,10 +210,9 @@ html, body {
   border: 2px solid var(--border-thick);
   border-radius: 4px;
   overflow: hidden;
-  /* Square: fills the smaller dimension of the flex container */
+  /* Square: min() picks the smaller container dimension, works consistently across browsers */
+  width: min(100cqw, 100cqh);
   aspect-ratio: 1 / 1;
-  width: 100%;
-  max-height: 100%;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -249,6 +251,7 @@ html, body {
 /* Cell state backgrounds */
 .cell.given        { background: var(--given-bg); }
 .cell.peer         { background: var(--peer-bg); }
+.cell.legal-entry  { background: var(--legal-entry-bg); }
 .cell.same-digit   { background: var(--same-digit-bg); }
 .cell.hint-cell    { background: var(--hint-cell-bg); }
 .cell.conflict     { background: var(--conflict-bg); }
@@ -257,16 +260,17 @@ html, body {
 
 /* Digit text */
 .digit {
-  font-size: clamp(14px, 5vmin, 32px);
+  font-size: max(14px, calc(var(--font-scale) * 5cqmin));
   font-weight: 600;
-  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', cursive;
+  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', 'Segoe Print', cursive;
   line-height: 1;
   pointer-events: none;
 }
 
-.given  .digit { color: var(--given-color); }
-.user   .digit { color: var(--user-color); }
-.conflict .digit { color: var(--conflict-color); }
+.given       .digit { color: var(--given-color); }
+.user        .digit { color: var(--user-color); }
+.conflict    .digit { color: var(--conflict-color); }
+.same-digit  .digit { font-weight: 800; }
 
 /* Hint-revealed cells (user answer via hint) get a distinct color */
 /* Applied by the 'user' class — hint reveals are regular answer entries */
@@ -285,11 +289,16 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(9px, 2vmin, 14px);
+  font-size: max(9px, calc(var(--font-scale) * 3cqmin));
   font-weight: 500;
-  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', cursive;
+  font-family: 'Noteworthy', 'Bradley Hand', 'Bradley Hand ITC', 'Segoe Print', cursive;
   color: var(--note-color);
   line-height: 1;
+}
+
+.note.highlighted {
+  font-weight: 700;
+  color: var(--user-color);
 }
 
 /* ── Loading overlay ────────────────────────────────────────────────────── */
@@ -534,6 +543,102 @@ html, body {
 .dialog-btns button.btn-secondary {
   background: var(--mode-bg);
   color: var(--given-color);
+}
+
+/* ── Settings dialog ────────────────────────────────────────────────────── */
+#settings-dialog {
+  max-height: 85vh;
+}
+
+#settings-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.settings-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--note-color);
+  margin-bottom: 4px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-thin);
+  gap: 12px;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row > span {
+  font-size: 15px;
+  color: var(--given-color);
+}
+
+.toggle-btn {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 12px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--note-color);
+  cursor: pointer;
+  touch-action: manipulation;
+  min-width: 48px;
+  flex-shrink: 0;
+}
+
+.toggle-btn.active {
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+  border-color: var(--mode-active);
+}
+
+.settings-seg {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.seg-btn {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 6px;
+  color: var(--given-color);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.seg-btn.active {
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+  border-color: var(--mode-active);
 }
 
 /* ── Scribble sink (off-screen, must not be display:none) ───────────────── */
