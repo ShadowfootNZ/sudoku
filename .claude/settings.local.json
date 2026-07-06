@@ -16,7 +16,10 @@
       "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" push -u origin main)",
       "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" add js/app.js css/style.css)",
       "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" diff --staged --stat)",
-      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" push)"
+      "PowerShell(git -C \"C:\\\\Users\\\\Brian\\\\Projects\\\\sudoku\" push)",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check js/generator.js)",
+      "Bash(node --input-type=module -e ' *)"
     ]
   }
 }

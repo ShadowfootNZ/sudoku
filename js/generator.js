@@ -55,6 +55,13 @@ const cellRow = i => Math.floor(i / 9);
 const cellCol = i => i % 9;
 const cellBox = i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);
 
+// Difficulty ranking shared by the grader and the digger, plus the minimum
+// clue count each tier is allowed to dig down to (17 is the proven floor for
+// any uniquely-solvable Sudoku).
+const GRADE_ORDER = { easy: 0, medium: 1, hard: 2, veryhard: 3 };
+const GRADE_NAMES = ['easy', 'medium', 'hard', 'veryhard'];
+const CLUE_FLOOR = { easy: 36, medium: 30, hard: 24, veryhard: 17 };
+
 // Fill board with a random valid solution via backtracking
 function solveRandom(board) {
   const idx = board.indexOf(EMPTY);
@@ -104,23 +111,31 @@ export function generateComplete() {
   return board;
 }
 
-// Remove cells while maintaining a unique solution
+// Remove cells while maintaining a unique solution, steering toward a target
+// difficulty: a removal is only kept if the puzzle still grades at or below
+// the target, so digging naturally stops right at the requested tier instead
+// of landing wherever random removal happens to end up.
 export function createPuzzle(solution, difficulty) {
-  const clues = { easy: 36, medium: 30, hard: 25, veryhard: 22 }[difficulty] ?? 30;
-  const toRemove = 81 - clues;
+  const targetRank = GRADE_ORDER[difficulty] ?? GRADE_ORDER.medium;
+  const floor = CLUE_FLOOR[difficulty] ?? 30;
   const puzzle = [...solution];
   const positions = shuffle(Array.from({ length: 81 }, (_, i) => i));
-  let removed = 0;
+  let clues = 81;
 
   for (const pos of positions) {
-    if (removed >= toRemove) break;
+    if (clues <= floor) break;
     const saved = puzzle[pos];
     puzzle[pos] = EMPTY;
-    if (countSolutions([...puzzle]) === 1) {
-      removed++;
-    } else {
+    if (countSolutions([...puzzle]) !== 1) {
       puzzle[pos] = saved;
+      continue;
     }
+    const grade = gradePuzzle(puzzle);
+    if (grade === null || GRADE_ORDER[grade] > targetRank) {
+      puzzle[pos] = saved; // this removal overshoots the target — keep the clue
+      continue;
+    }
+    clues--;
   }
 
   return puzzle;
@@ -135,7 +150,7 @@ function gradePuzzle(puzzle) {
     v !== 0 ? null : new Set([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => isValid(board, i, d)))
   );
 
-  const G = { easy: 0, medium: 1, hard: 2, veryhard: 3 };
+  const G = GRADE_ORDER;
   let hardest = G.easy;
 
   const place = (i, v) => {
@@ -148,6 +163,31 @@ function gradePuzzle(puzzle) {
     if (!cands[i] || !cands[i].has(v)) return false;
     cands[i].delete(v);
     return true;
+  };
+
+  // Swordfish helper: `lines` are candidate-lines for digit `d` with 2-3 cross
+  // positions each; if three of them union to exactly 3 cross positions, `d`
+  // can be eliminated from those cross lines outside the three base lines.
+  const trySwordfish = (lines, byColumn, d) => {
+    for (let a = 0; a < lines.length - 2; a++) {
+      for (let b = a + 1; b < lines.length - 1; b++) {
+        for (let c = b + 1; c < lines.length; c++) {
+          const union = new Set([...lines[a].cross, ...lines[b].cross, ...lines[c].cross]);
+          if (union.size !== 3) continue;
+          const usedLines = [lines[a].line, lines[b].line, lines[c].line];
+          let changed = false;
+          for (const cross of union) {
+            const unit = byColumn ? UNITS[cross] : UNITS[9 + cross];
+            for (const i of unit) {
+              const lineOfI = byColumn ? cellCol(i) : cellRow(i);
+              if (!usedLines.includes(lineOfI)) changed = elim(i, d) || changed;
+            }
+          }
+          if (changed) return true;
+        }
+      }
+    }
+    return false;
   };
 
   outer: while (true) {
@@ -307,11 +347,83 @@ function gradePuzzle(puzzle) {
       }
     }
 
+    // Swordfish (Very Hard): digit confined to 2-3 cells per line across three
+    // rows (or columns) whose candidate columns (or rows) union to just three
+    for (let d = 1; d <= 9; d++) {
+      const rowLines = [];
+      for (let r = 0; r < 9; r++) {
+        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
+        if (cols.length >= 2 && cols.length <= 3) rowLines.push({ line: r, cross: cols });
+      }
+      if (trySwordfish(rowLines, false, d)) { hardest = Math.max(hardest, G.veryhard); continue outer; }
+
+      const colLines = [];
+      for (let c = 0; c < 9; c++) {
+        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
+        if (rows.length >= 2 && rows.length <= 3) colLines.push({ line: c, cross: rows });
+      }
+      if (trySwordfish(colLines, true, d)) { hardest = Math.max(hardest, G.veryhard); continue outer; }
+    }
+
+    // XY-Wing (Very Hard): pivot with candidates {x,y}; wings {x,z} and {y,z}
+    // (each a peer of the pivot) let z be eliminated from any cell seeing both wings
+    for (let p = 0; p < 81; p++) {
+      if (!cands[p] || cands[p].size !== 2) continue;
+      const [x, y] = [...cands[p]];
+      const peerCells = PEERS[p].filter(i => cands[i]?.size === 2);
+      const w1cands = peerCells.filter(i => cands[i].has(x) && !cands[i].has(y));
+      const w2cands = peerCells.filter(i => cands[i].has(y) && !cands[i].has(x));
+
+      let progressed = false;
+      for (const w1 of w1cands) {
+        const z1 = [...cands[w1]].find(v => v !== x);
+        for (const w2 of w2cands) {
+          if (w2 === w1) continue;
+          const z2 = [...cands[w2]].find(v => v !== y);
+          if (z1 !== z2) continue;
+          const z = z1;
+          const targets = PEERS[w1].filter(i => i !== p && PEERS[w2].includes(i) && cands[i]?.has(z));
+          let changed = false;
+          for (const t of targets) changed = elim(t, z) || changed;
+          if (changed) { progressed = true; break; }
+        }
+        if (progressed) break;
+      }
+      if (progressed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
+    }
+
+    // Unique Rectangle Type 1 (Very Hard): 3 corners of a 2-box rectangle share
+    // the same 2 candidates; the 4th corner cannot also be that pair (it would
+    // create a second solution), so those 2 candidates can be eliminated there
+    for (let r1 = 0; r1 < 9; r1++) {
+      for (let r2 = r1 + 1; r2 < 9; r2++) {
+        for (let c1 = 0; c1 < 9; c1++) {
+          for (let c2 = c1 + 1; c2 < 9; c2++) {
+            const i11 = r1 * 9 + c1, i12 = r1 * 9 + c2, i21 = r2 * 9 + c1, i22 = r2 * 9 + c2;
+            if (cellBox(i11) === cellBox(i12)) continue;
+            if (cellBox(i11) !== cellBox(i21) || cellBox(i12) !== cellBox(i22)) continue;
+            const corners = [i11, i12, i21, i22];
+            const bivals = corners.filter(i => cands[i]?.size === 2);
+            if (bivals.length !== 3) continue;
+            const pairKeys = new Set(bivals.map(i => [...cands[i]].sort((a, b) => a - b).join(',')));
+            if (pairKeys.size !== 1) continue;
+            const [A, B] = [...pairKeys][0].split(',').map(Number);
+            const target = corners.find(i => !bivals.includes(i));
+            if (!cands[target] || !cands[target].has(A) || !cands[target].has(B) || cands[target].size <= 2) continue;
+            let changed = false;
+            changed = elim(target, A) || changed;
+            changed = elim(target, B) || changed;
+            if (changed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
+          }
+        }
+      }
+    }
+
     break; // No technique made progress — grader is stuck
   }
 
   if (board.some(v => v === 0)) return null;
-  return ['easy', 'medium', 'hard', 'veryhard'][hardest];
+  return GRADE_NAMES[hardest];
 }
 
 // Technique-based hint finder.
@@ -335,6 +447,33 @@ export function findHint(board, solution) {
     if (!cands[i] || !cands[i].has(v)) return false;
     cands[i].delete(v);
     return true;
+  };
+
+  // Swordfish helper: mirrors the one in gradePuzzle, returning the first
+  // affected cell (for the hint pointer) instead of a plain boolean.
+  const trySwordfish = (lines, byColumn, d) => {
+    for (let a = 0; a < lines.length - 2; a++) {
+      for (let b = a + 1; b < lines.length - 1; b++) {
+        for (let c = b + 1; c < lines.length; c++) {
+          const union = new Set([...lines[a].cross, ...lines[b].cross, ...lines[c].cross]);
+          if (union.size !== 3) continue;
+          const usedLines = [lines[a].line, lines[b].line, lines[c].line];
+          let changed = false, firstCell = null;
+          for (const cross of union) {
+            const unit = byColumn ? UNITS[cross] : UNITS[9 + cross];
+            for (const i of unit) {
+              const lineOfI = byColumn ? cellCol(i) : cellRow(i);
+              if (!usedLines.includes(lineOfI) && elim(i, d)) {
+                changed = true;
+                if (firstCell === null) firstCell = i;
+              }
+            }
+          }
+          if (changed) return firstCell;
+        }
+      }
+    }
+    return null;
   };
 
   let fallback = null;
@@ -510,27 +649,117 @@ export function findHint(board, solution) {
       }
     }
 
+    // Swordfish
+    for (let d = 1; d <= 9; d++) {
+      const rowLines = [];
+      for (let r = 0; r < 9; r++) {
+        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
+        if (cols.length >= 2 && cols.length <= 3) rowLines.push({ line: r, cross: cols });
+      }
+      let hit = trySwordfish(rowLines, false, d);
+      if (hit !== null) {
+        if (!fallback) fallback = { type: 'swordfish', cell: hit };
+        continue outer;
+      }
+
+      const colLines = [];
+      for (let c = 0; c < 9; c++) {
+        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
+        if (rows.length >= 2 && rows.length <= 3) colLines.push({ line: c, cross: rows });
+      }
+      hit = trySwordfish(colLines, true, d);
+      if (hit !== null) {
+        if (!fallback) fallback = { type: 'swordfish', cell: hit };
+        continue outer;
+      }
+    }
+
+    // XY-Wing
+    for (let p = 0; p < 81; p++) {
+      if (!cands[p] || cands[p].size !== 2) continue;
+      const [x, y] = [...cands[p]];
+      const peerCells = PEERS[p].filter(i => cands[i]?.size === 2);
+      const w1cands = peerCells.filter(i => cands[i].has(x) && !cands[i].has(y));
+      const w2cands = peerCells.filter(i => cands[i].has(y) && !cands[i].has(x));
+
+      let progressed = false;
+      for (const w1 of w1cands) {
+        const z1 = [...cands[w1]].find(v => v !== x);
+        for (const w2 of w2cands) {
+          if (w2 === w1) continue;
+          const z2 = [...cands[w2]].find(v => v !== y);
+          if (z1 !== z2) continue;
+          const z = z1;
+          const targets = PEERS[w1].filter(i => i !== p && PEERS[w2].includes(i) && cands[i]?.has(z));
+          let changed = false;
+          for (const t of targets) changed = elim(t, z) || changed;
+          if (changed) {
+            if (!fallback) fallback = { type: 'xy-wing', cell: p };
+            progressed = true;
+            break;
+          }
+        }
+        if (progressed) break;
+      }
+      if (progressed) continue outer;
+    }
+
+    // Unique Rectangle Type 1
+    for (let r1 = 0; r1 < 9; r1++) {
+      for (let r2 = r1 + 1; r2 < 9; r2++) {
+        for (let c1 = 0; c1 < 9; c1++) {
+          for (let c2 = c1 + 1; c2 < 9; c2++) {
+            const i11 = r1 * 9 + c1, i12 = r1 * 9 + c2, i21 = r2 * 9 + c1, i22 = r2 * 9 + c2;
+            if (cellBox(i11) === cellBox(i12)) continue;
+            if (cellBox(i11) !== cellBox(i21) || cellBox(i12) !== cellBox(i22)) continue;
+            const corners = [i11, i12, i21, i22];
+            const bivals = corners.filter(i => cands[i]?.size === 2);
+            if (bivals.length !== 3) continue;
+            const pairKeys = new Set(bivals.map(i => [...cands[i]].sort((a, b) => a - b).join(',')));
+            if (pairKeys.size !== 1) continue;
+            const [A, B] = [...pairKeys][0].split(',').map(Number);
+            const target = corners.find(i => !bivals.includes(i));
+            if (!cands[target] || !cands[target].has(A) || !cands[target].has(B) || cands[target].size <= 2) continue;
+            let changed = false;
+            changed = elim(target, A) || changed;
+            changed = elim(target, B) || changed;
+            if (changed) {
+              if (!fallback) fallback = { type: 'unique-rectangle', cell: target };
+              continue outer;
+            }
+          }
+        }
+      }
+    }
+
     break;
   }
 
   return fallback ?? { type: 'stuck' };
 }
 
-// Generate a puzzle guaranteed to match the target difficulty grade.
-// Retries up to 50 times; falls back to the first non-null grade if exhausted.
+// Generate a puzzle matching the target difficulty grade. createPuzzle()
+// already digs toward the target (never overshooting it), so this usually
+// succeeds on the first solution tried; the small retry budget only covers
+// the rare solution where the target grade isn't reachable before the clue
+// floor. Falls back to the closest grade achieved (never harder than asked).
 export function generateGraded(difficulty) {
-  const MAX = 50;
-  let fallback = null;
+  const MAX = 12;
+  const targetRank = GRADE_ORDER[difficulty] ?? GRADE_ORDER.medium;
+  let best = null;
+  let bestRank = -1;
 
   for (let attempt = 0; attempt < MAX; attempt++) {
     const solution = generateComplete();
     const puzzle = createPuzzle(solution, difficulty);
     const grade = gradePuzzle(puzzle);
     if (grade === difficulty) return { puzzle, solution };
-    if (grade !== null && fallback === null) fallback = { puzzle, solution };
+    const rank = grade === null ? -1 : GRADE_ORDER[grade];
+    if (rank > bestRank) { bestRank = rank; best = { puzzle, solution }; }
+    if (bestRank === targetRank) break;
   }
 
-  if (fallback) return fallback;
+  if (best) return best;
   const solution = generateComplete();
   return { puzzle: createPuzzle(solution, difficulty), solution };
 }
