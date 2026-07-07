@@ -5,7 +5,7 @@ import settings from './settings.js';
 import {
   buildGrid, renderAll, renderPeersOf, renderEntryAll,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
-  updateHintBtn, updateHintTechnique, dismissHintTechnique, updateNumpad, setNotesModeUI,
+  updateHintBtn, updateHintTechnique, dismissHintTechnique, renderHintStep, updateNumpad, setNotesModeUI,
   showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, hideOverlay,
 } from './ui.js';
 import { initInput, setInputHandlers } from './input.js';
@@ -135,6 +135,7 @@ function init() {
     showComplete();
   });
   document.addEventListener('hintschanged',  () => { updateHintsDisplay(); updateRevealsDisplay(); });
+  document.addEventListener('hintstepchanged', renderHintStep);
   document.addEventListener('errorschanged', () => updateErrorsDisplay());
   document.addEventListener('settingschange', () => {
     renderAll();
@@ -261,6 +262,8 @@ function init() {
   });
 
   document.getElementById('hint-technique-close').addEventListener('click', dismissHintTechnique);
+  document.getElementById('hint-step-prev').addEventListener('click', () => state.hintStepPrev());
+  document.getElementById('hint-step-next').addEventListener('click', () => state.hintStepNext());
 
   document.getElementById('entry-confirm-btn').addEventListener('click', () => {
     const puzzle = [...entryGrid];

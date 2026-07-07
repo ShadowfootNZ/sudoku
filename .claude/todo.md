@@ -24,63 +24,7 @@
 
 - [ ] **Use the puzzle catalogue** — replace the live generator in `startNewGame()` with a random pick from the appropriate difficulty pool in `puzzles.json`. Fetch the file once on startup (or lazily on first new game) and cache it. Fall back to the current live generator if the fetch fails. Add `puzzles.json` to the SW cache assets list and the deploy workflow allowlist.
 
-- [ ] **Hint chains — show the full technique chain, not just the final cell** (big feature; `js/generator.js`, `js/state.js`, `js/ui.js`, `css/style.css`) — **phased implementation plan: `.claude/hint-chains-plan.md`** (created 2026-07-07)
-
-  **Problem.** `findHint()` runs the technique cascade on a temp candidate grid: elimination techniques (pointing, pairs, X-Wing, …) apply their eliminations silently and the cascade restarts; the hint returned to the player is usually just the *final* single that opens up (e.g. "Hidden Single") with one highlighted cell. The chain of techniques that made that single possible — and the cells that form each pattern (the two hidden-pair cells, the four X-Wing corners) — is invisible. The player sees "Hidden Single" on a cell that is not deducible by a hidden single from the visible board state.
-
-  **Goal.** A hint returns the ordered chain of steps from the current board to a placeable digit. Each step names its technique, highlights the pattern cells that justify it, and highlights the cells whose candidates it eliminates. The player steps through the chain in order; the last step is the placement cell (current behavior becomes the final step).
-
-  ### 1. Data model — `findHint()` returns a chain
-
-  ```js
-  // findHint(board, solution) →
-  {
-    steps: [
-      { type: 'pointing',      patternCells: [3,4],        eliminations: [{cell:12, digit:7}, ...] },
-      { type: 'hidden-pair',   patternCells: [30,32],      eliminations: [{cell:30, digit:1}] },
-      { type: 'hidden-single', patternCells: [/* unit */], placement: {cell:40, digit:7} }
-    ]
-  }
-  // plus { type:'error' } / { type:'stuck' } passthroughs as today
-  ```
-
-  - Every detector must report its **pattern cells** (today they return one cell): pointing/box-line = the confined candidate cells; naked/hidden pair/triple = the 2-3 defining cells; X-Wing/Swordfish = the 4/6+ line-intersection cells; XY-Wing = pivot + both wings; UR = the three bivalue corners + target. Singles report the target cell (hidden single may also carry its unit for display).
-  - Every elimination step records the exact `{cell, digit}` eliminations it applied — these are the "affected" cells to highlight in a second color.
-  - Recording stops at the first single that opens up (that step gets `placement`), or at stuck.
-
-  ### 2. Foundation — unify the cascade first (do NOT build this twice)
-
-  This is the same refactor as cleanup follow-up #5 above and should be done as its first phase: convert the 11 technique blocks into a shared table of detector functions, each returning `{ type, patternCells, eliminations }` (or `placement` for singles), consumed by:
-  - `gradePuzzle()` → maps type → rank, ignores cells;
-  - `findHint()` → records each applied step into the chain.
-
-  Sequencing: **UR bug fixes first** (previous todo item — same code), then cascade unification, then chain recording on top. Doing hint chains against the duplicated cascade would double ~all of this work.
-
-  ### 3. Chain relevance pruning (phase 2, optional)
-
-  The raw chain contains every step the cascade happened to apply, including ones irrelevant to the final placement. Prune backwards: mark the placement's supporting eliminations relevant (eliminations in the placed cell for a naked single; eliminations of the placed digit in the unit for a hidden single); then walk earlier steps and keep any whose eliminations touch a kept step's pattern cells or supporting unit; drop the rest, preserving order. Heuristic, not exact dependency tracking — acceptable. Ship phase 1 with the full chain; add pruning if chains feel noisy in play.
-
-  ### 4. State (`state.js`)
-
-  - Replace `hintCell`/`hintTechnique` with `hintChain` (array of steps or null) and `hintStep` (index). Keep derived getters for backward compatibility where cheap (`hintCell` ≙ placement cell of last step) since the Hint→Peek button flow keys off it.
-  - `getHint()`: store the chain, set `hintStep = 0`, increment `hintsPointed` once per chain (not per step), select the placement cell as today.
-  - New actions `hintStepNext()` / `hintStepPrev()` → clamp to range, emit `hintstepchanged`.
-  - **Invalidation**: clear the whole chain on ANY board mutation (`setValue`, `clearCell`, `peekCell`, note edits that change candidates, undo/redo) — eliminations recorded against the old candidate state may no longer hold. This is stricter than today's "clear when hinted cell filled" and simpler to reason about.
-  - Persistence: session-only like today (`hintCell` is already not restored on load); undo snapshots carry `hintChain`/`hintStep` the way they carry `hintCell`/`hintTechnique` now.
-
-  ### 5. UI (`ui.js`, `css/style.css`, `index.html`)
-
-  - **Cell highlights per step**: `.hint-pattern` (the cells that justify the technique — distinct strong color) and `.hint-elim` (cells losing candidates — muted/secondary). Final step keeps the existing selected-cell treatment on the placement cell. Colors need light + dark mode values; must not collide with peer/match/legal/conflict highlights (see CSS custom props).
-  - **Stepper in the technique pill**: extend `#hint-technique` to `‹ Step 2 of 3 — Hidden Pair ›` with Prev/Next buttons (44px touch targets for iPad); label from `TECHNIQUE_LABELS`. Dismiss (×) keeps the chain but hides the pill, as today. When `showStrategyOnHint` is off, show the stepper with step numbers but no technique names (or gate the whole stepper on the setting — decide during implementation).
-  - If notes are displayed for an elimination cell, optionally bold/strike the eliminated candidate digit inside the note (stretch; ties into the "Enhanced selection highlighting" feature below).
-  - New render path `renderHintStep()` driven by `hintstepchanged`; `renderAll()` must reapply the current step's classes (grid rebuilds replace cell innerHTML — see Scribble lessons).
-
-  ### 6. Verification
-
-  1. Node unit checks: on synthetic boards, assert chains are well-formed — non-empty, end in a `placement` step, every elimination is sound (never removes the solution digit of its cell — validate against `solution`), every `patternCells` non-empty, and applying the eliminations in order actually yields the final single.
-  2. Simulated solves: follow chains to completion on ~20 generated puzzles per tier; 0 errors, no stuck-with-chain states.
-  3. On-device (iPad Safari): stepper touch targets, highlight colors in light/dark, pill placement (`position:fixed` pill confirmed working on iPad as of 2026-07-06).
-  4. `node --check`, SW cache bump, plan.md/todo.md updates.
+- [x] **Hint chains — show the full technique chain, not just the final cell** — **DONE 2026-07-07**, all 4 phases (see `.claude/hint-chains-plan.md` for full results). `findHint()` returns `{ steps: [...] }`, the ordered chain of every technique from the current board to a placement; `state.js` tracks `hintChain`/`hintStep`; the pill is now a stepper — "‹ Step 2 of 4 — Hidden Pair ›" — with 44px Prev/Next buttons, and grid cells show `.hint-pattern` (justifying cells, purple) / `.hint-elim` (eliminated-candidate cells, muted purple) per step, with the final step keeping the pre-chain placement-cell treatment. Verified in a real headless-Chromium browser: stepped real 4- and 7-step Very Hard chains, confirmed highlights genuinely change per step, Prev/Next clamp correctly, dismiss keeps the chain, filling a cell clears it, both themes render legibly, 0 console errors. Phase 5 (chain relevance pruning, only if chains feel noisy in play) remains optional/unstarted.
 
 - [ ] **Update checking that preserves the in-progress puzzle** (`js/app.js`, `js/state.js`, `sw.js`)
 
@@ -143,8 +87,8 @@
 ## Potential Issues to Watch
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v36`.
-- Hint pill technique name (2026-07-07, hint-chains phase 2): now shows the *final* step's technique in the chain rather than the earliest eliminating technique that fired. E.g. a hint reached via Pointing → Hidden Single now labels the pill "Hidden Single" instead of "Pointing". Intentional/temporary per the phase 2 adapter in `state.getHint()` — resolved properly by the phase 4 stepper, which will show every step.
+- Service worker cache is currently `sudoku-v38`.
+- Hint chain stepper (2026-07-07, hint-chains phase 4): verified in a desktop headless-Chromium browser, not on-device. Should still confirm on iPad Safari: the two new 44×44px Prev/Next touch targets fit comfortably next to the existing × dismiss button on the pill without crowding, and the purple pattern/elim highlight colors read well in real iPad display conditions (the pill's `position:fixed` placement itself was already confirmed working on iPad as of 2026-07-06).
 
 ---
 

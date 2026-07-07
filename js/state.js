@@ -28,8 +28,8 @@ const _s = {
   notes:        Array.from({ length: 81 }, () => new Set()),
   solution:     new Array(81).fill(EMPTY),
   selected:     -1,
-  hintCell:      -1,
-  hintTechnique: null,
+  hintChain:    null, // ordered array of technique steps from findHint(), or null
+  hintStep:     0,    // index into hintChain currently shown by the stepper
   history:      [],
   redoStack:    [],
   notesMode:    false,
@@ -69,22 +69,31 @@ function pruneAllCandidates() {
 
 function snapshot() {
   return {
-    answer:        [..._s.answer],
-    notes:         _s.notes.map(s => new Set(s)),
-    hintCell:      _s.hintCell,
-    hintTechnique: _s.hintTechnique,
-    hintsUsed:     _s.hintsUsed,
-    fillOrder:     [..._s.fillOrder],
+    answer:      [..._s.answer],
+    notes:       _s.notes.map(s => new Set(s)),
+    hintChain:   _s.hintChain,
+    hintStep:    _s.hintStep,
+    hintsUsed:   _s.hintsUsed,
+    fillOrder:   [..._s.fillOrder],
   };
 }
 
 function restoreSnapshot(snap) {
-  _s.answer        = snap.answer;
-  _s.notes         = snap.notes;
-  _s.hintCell      = snap.hintCell;
-  _s.hintTechnique = snap.hintTechnique ?? null;
-  _s.hintsUsed     = snap.hintsUsed;
-  _s.fillOrder     = snap.fillOrder ?? [];
+  _s.answer      = snap.answer;
+  _s.notes       = snap.notes;
+  _s.hintChain   = snap.hintChain ?? null;
+  _s.hintStep    = snap.hintStep ?? 0;
+  _s.hintsUsed   = snap.hintsUsed;
+  _s.fillOrder   = snap.fillOrder ?? [];
+}
+
+// Recorded eliminations are only valid against the exact candidate state they
+// were computed from — any board mutation (a value placed/cleared, a note
+// edited, an undo/redo) can invalidate them, so every mutator clears the
+// whole chain rather than trying to patch it.
+function invalidateHint() {
+  _s.hintChain = null;
+  _s.hintStep  = 0;
 }
 
 function pushHistory() {
@@ -95,8 +104,13 @@ function pushHistory() {
 
 const state = {
   get selected()     { return _s.selected; },
-  get hintCell()      { return _s.hintCell; },
-  get hintTechnique() { return _s.hintTechnique; },
+  // Derived from the chain for backward compatibility: the eventual placement
+  // cell (last step), and the technique of the step currently shown by the
+  // stepper (first step until phase 4's UI lets the player advance it).
+  get hintCell()      { return _s.hintChain ? _s.hintChain[_s.hintChain.length - 1].placement.cell : -1; },
+  get hintTechnique() { return _s.hintChain ? _s.hintChain[_s.hintStep].type : null; },
+  get hintChain()     { return _s.hintChain; },
+  get hintStep()      { return _s.hintStep; },
   get hintsUsed()     { return _s.hintsUsed; },
   get hintsPointed()  { return _s.hintsPointed; },
   get errors()        { return _s.errors; },
@@ -115,8 +129,7 @@ const state = {
     _s.notes       = Array.from({ length: 81 }, () => new Set());
     _s.solution    = [...solution];
     _s.selected    = -1;
-    _s.hintCell      = -1;
-    _s.hintTechnique = null;
+    invalidateHint();
     _s.history     = [];
     _s.redoStack   = [];
     _s.difficulty  = difficulty;
@@ -132,8 +145,7 @@ const state = {
   resetPuzzle() {
     _s.answer        = new Array(81).fill(EMPTY);
     _s.notes         = Array.from({ length: 81 }, () => new Set());
-    _s.hintCell      = -1;
-    _s.hintTechnique = null;
+    invalidateHint();
     _s.history       = [];
     _s.redoStack     = [];
     _s.fillOrder     = [];
@@ -160,7 +172,7 @@ const state = {
       emit('errorschanged');
     }
     _s.answer[cell] = digit;
-    if (_s.hintCell === cell) { _s.hintCell = -1; _s.hintTechnique = null; }
+    invalidateHint();
     _s.notes[cell].clear();
     const fo1 = _s.fillOrder.indexOf(cell);
     if (fo1 !== -1) _s.fillOrder.splice(fo1, 1);
@@ -175,6 +187,7 @@ const state = {
     if (_s.given[cell]) return;
     pushHistory();
     _s.answer[cell] = EMPTY;
+    invalidateHint();
     _s.notes[cell].clear();
     const fo2 = _s.fillOrder.indexOf(cell);
     if (fo2 !== -1) _s.fillOrder.splice(fo2, 1);
@@ -191,6 +204,7 @@ const state = {
     } else if (!isConflict(cell, digit)) {
       notes.add(digit);
     }
+    invalidateHint();
     state.save();
     emit('statechange', { cell });
   },
@@ -198,6 +212,7 @@ const state = {
   fillCandidates(cell) {
     if (_s.given[cell] || _s.answer[cell]) return;
     _s.notes[cell] = validCandidates(cell);
+    invalidateHint();
     state.save();
     emit('statechange', { cell });
   },
@@ -208,6 +223,7 @@ const state = {
         _s.notes[i] = validCandidates(i);
       }
     }
+    invalidateHint();
     state.save();
     emit('statechange', { all: true });
   },
@@ -231,39 +247,43 @@ const state = {
   },
 
   getHint() {
-    if (_s.hintCell !== -1) return;
+    if (_s.hintChain) return;
     const board = _s.given.map((g, i) => g || _s.answer[i]);
     const result = findHint(board, _s.solution);
     if (result.type === 'error') { emit('hinterror'); return; }
     if (result.type === 'stuck') return;
-    // Temporary adapter (hint-chains phase 2): findHint now returns the full
-    // technique chain; until phase 3/4 build the stepper, point at the final
-    // step's placement, same as the single-cell hint behaved before.
-    const lastStep = result.steps[result.steps.length - 1];
-    _s.hintCell      = lastStep.placement.cell;
-    _s.hintTechnique = lastStep.type;
+    _s.hintChain = result.steps;
+    _s.hintStep  = 0;
     _s.hintsPointed++;
-    state.selectCell(_s.hintCell);
+    state.selectCell(state.hintCell);
     state.save();
-    emit('statechange', { cell: _s.hintCell });
+    emit('statechange', { cell: state.hintCell });
     emit('hintschanged');
+  },
+
+  hintStepNext() {
+    if (!_s.hintChain || _s.hintStep >= _s.hintChain.length - 1) return;
+    _s.hintStep++;
+    emit('hintstepchanged');
+  },
+
+  hintStepPrev() {
+    if (!_s.hintChain || _s.hintStep <= 0) return;
+    _s.hintStep--;
+    emit('hintstepchanged');
   },
 
   peekCell(cell) {
     if (_s.given[cell] || _s.answer[cell]) return;
     pushHistory();
     _s.answer[cell] = _s.solution[cell];
+    invalidateHint();
     _s.notes[cell].clear();
     const fo3 = _s.fillOrder.indexOf(cell);
     if (fo3 !== -1) _s.fillOrder.splice(fo3, 1);
     _s.fillOrder.push(cell);
     pruneAllCandidates();
     _s.hintsUsed++;
-    // Clear the active hint if the hinted cell now has a value
-    if (_s.hintCell !== -1 && (_s.given[_s.hintCell] || _s.answer[_s.hintCell])) {
-      _s.hintCell = -1;
-      _s.hintTechnique = null;
-    }
     state.save();
     emit('statechange', { cell });
     emit('hintschanged');
@@ -313,7 +333,7 @@ const state = {
       _s.errors        = d.errors        ?? 0;
       _s.selected      = d.selected      ?? -1;
       _s.fillOrder     = d.fillOrder     ?? [];
-      _s.hintCell      = -1;
+      invalidateHint();
       _s.history       = [];
       _s.redoStack     = [];
       return true;

@@ -50,10 +50,21 @@ export function renderCell(i) {
     if (settings.conflictCheck && state.isConflict(i, answer)) cls.push('conflict');
   }
 
+  // Current hint chain step: the final step (a single) keeps the pre-chain
+  // "hint-cell" treatment; earlier steps highlight their pattern cells
+  // (the cells that justify the technique) and elimination targets separately.
+  const step = state.hintChain ? state.hintChain[state.hintStep] : null;
+  const isFinalStep = !!step?.placement;
+  const elimDigitAt = (cellIdx) => step?.eliminations?.find(e => e.cell === cellIdx)?.digit;
+
   if (i === s.selected) {
     cls.push('selected');
-  } else if (i === s.hintCell) {
+  } else if (isFinalStep && i === step.placement.cell) {
     cls.push('hint-cell');
+  } else if (step && !isFinalStep && step.patternCells.includes(i)) {
+    cls.push('hint-pattern');
+  } else if (step && !isFinalStep && elimDigitAt(i) !== undefined) {
+    cls.push('hint-elim');
   } else if (s.selected !== -1) {
     const sr = Math.floor(s.selected / 9), sc = s.selected % 9;
     const ir = Math.floor(i / 9),          ic = i % 9;
@@ -79,7 +90,8 @@ export function renderCell(i) {
     for (let d = 1; d <= 9; d++) {
       const on = notes.has(d);
       const hl = settings.highlightMatches && on && selVal === d;
-      html += `<span class="note${on ? ' on' : ''}${hl ? ' highlighted' : ''}">${on ? d : ''}</span>`;
+      const eliminated = on && elimDigitAt(i) === d;
+      html += `<span class="note${on ? ' on' : ''}${hl ? ' highlighted' : ''}${eliminated ? ' eliminated' : ''}">${on ? d : ''}</span>`;
     }
     html += '</div>';
     el.innerHTML = html;
@@ -179,25 +191,47 @@ const TECHNIQUE_LABELS = {
 
 let _techniqueDismissed = false;
 
+// Stepper pill: "‹ Step 2 of 3 — Hidden Pair ›" (or just "Step 2 of 3" when
+// showStrategyOnHint is off — the step count stays useful even without names).
 export function updateHintTechnique() {
   const el = document.getElementById('hint-technique');
   if (!el) return;
-  const tech = state.hintTechnique;
-  if (!tech) {
+  const chain = state.hintChain;
+  if (!chain) {
     _techniqueDismissed = false;
     el.hidden = true;
     return;
   }
   if (_techniqueDismissed) return;
-  const label = settings.showStrategyOnHint ? (TECHNIQUE_LABELS[tech] ?? tech) : null;
-  document.getElementById('hint-technique-label').textContent = label ?? '';
-  el.hidden = !label;
+
+  const stepIdx = state.hintStep;
+  const total = chain.length;
+  const stepLabel = `Step ${stepIdx + 1} of ${total}`;
+  const tech = chain[stepIdx].type;
+  const label = settings.showStrategyOnHint
+    ? `${stepLabel} — ${TECHNIQUE_LABELS[tech] ?? tech}`
+    : stepLabel;
+  document.getElementById('hint-technique-label').textContent = label;
+  el.hidden = false;
+
+  const prevBtn = document.getElementById('hint-step-prev');
+  const nextBtn = document.getElementById('hint-step-next');
+  if (prevBtn) prevBtn.disabled = stepIdx === 0;
+  if (nextBtn) nextBtn.disabled = stepIdx === total - 1;
 }
 
 export function dismissHintTechnique() {
   _techniqueDismissed = true;
   const el = document.getElementById('hint-technique');
   if (el) el.hidden = true;
+}
+
+// Grid highlights depend on the cell's data, but the highlighted cells for
+// a hint step can be scattered anywhere on the board (not just around the
+// selected cell), so stepping needs a full re-render rather than renderPeersOf.
+export function renderHintStep() {
+  renderAll();
+  updateHintTechnique();
 }
 
 export function setNotesModeUI(active) {

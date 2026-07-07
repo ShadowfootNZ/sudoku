@@ -17,6 +17,8 @@
   --same-digit-bg: #c8e0ff;
   --legal-entry-bg:#ddf4f8;
   --hint-cell-bg:  #fff3c0;
+  --hint-pattern-bg:#e0b3f0;
+  --hint-elim-bg:  #f0e6f5;
   --note-color:    #4a4a5a;
   --btn-bg:        #ffffff;
   --btn-border:    #c8c8d0;
@@ -52,6 +54,8 @@
     --same-digit-bg: #1a3a5a;
     --legal-entry-bg:#0d2228;
     --hint-cell-bg:  #4a3a00;
+    --hint-pattern-bg:#6a3f8a;
+    --hint-elim-bg:  #3d2c47;
     --note-color:    #aaaabc;
     --btn-bg:        #3a3a3c;
     --btn-border:    #545458;
@@ -256,6 +260,8 @@ html, body {
 .cell.legal-entry  { background: var(--legal-entry-bg); }
 .cell.same-digit   { background: var(--same-digit-bg); }
 .cell.hint-cell    { background: var(--hint-cell-bg); }
+.cell.hint-pattern { background: var(--hint-pattern-bg); }
+.cell.hint-elim    { background: var(--hint-elim-bg); }
 .cell.conflict     { background: var(--conflict-bg); }
 .cell.selected     { background: var(--accent); }
 .cell.hover        { background: var(--hover-bg); }
@@ -301,6 +307,11 @@ html, body {
 .note.highlighted {
   font-weight: 700;
   color: var(--user-color);
+}
+
+.note.eliminated {
+  text-decoration: line-through;
+  color: var(--conflict-color);
 }
 
 /* ── Loading overlay ────────────────────────────────────────────────────── */
@@ -490,17 +501,43 @@ html, body {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
   background: var(--hint-cell-bg);
   border: 1px solid var(--border-thin);
-  border-radius: 20px;
-  padding: 5px 8px 5px 14px;
+  border-radius: 26px;
+  padding: 2px 4px 2px 10px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--given-color);
   box-shadow: var(--shadow);
   white-space: nowrap;
   pointer-events: auto;
+}
+
+#hint-technique-label {
+  padding: 0 4px;
+}
+
+.hint-step-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--given-color);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hint-step-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 #hint-technique-close {

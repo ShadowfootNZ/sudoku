@@ -15,7 +15,7 @@ A Sudoku game playable in Safari on iPad with Apple Pencil support. Hosted as a 
 sudoku/
 ├── index.html          # App shell, viewport meta, PWA meta tags
 ├── manifest.json       # PWA: standalone, portrait, icons
-├── sw.js               # Cache-first service worker (currently v36)
+├── sw.js               # Cache-first service worker (currently v38)
 ├── icons/
 │   ├── icon-192.png          # Original sudoku PWA icon (kept for SW cache)
 │   ├── icon-512.png          # Original sudoku PWA icon; used as apple-touch-icon
@@ -62,7 +62,11 @@ Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a pu
 
 **Unified technique cascade (2026-07-07, hint-chains phase 1):** the 11 technique blocks previously duplicated across `gradePuzzle` and `findHint` are now one shared table. Each detector (`findNakedSingle` … `findUniqueRectangle`) scans the candidate grid read-only and returns the first applicable step — `{ type, cell, patternCells, eliminations }` for elimination techniques, `{ type, cell, patternCells, placement }` for singles — or null. `DETECTORS` fixes the cascade order, `TECH_RANK` maps type→difficulty rank, `findStep()` returns the first match. `gradePuzzle` is a thin driver that applies the step and restarts the cascade from the top. Refactor verified behaviorally identical (0 mismatches over 101 grade + 5,220 hint comparisons) at unchanged speed.
 
-**Hint Chains (2026-07-07, hint-chains phase 2):** `findHint(board, solution)` now returns `{ steps: [...] }` instead of `{ type, cell }` — the full ordered chain of every technique the cascade applied to reach a placement, not just the final one. Each step is exactly the detector's step object (`type`, `cell`, `patternCells`, and `eliminations` or `placement`); recording stops at the first `placement` step, or returns `{ type: 'stuck' }` if the cascade gets stuck first (partial chains are discarded, not surfaced). `{ type: 'error' }` is unchanged. This replaces the old fallback-tracking logic in `findHint` entirely. The UI doesn't yet consume the chain — `state.getHint()` has a temporary adapter reading the last step (see Hint/Peek System above) until phases 3–4 (state model + stepper UI) land. Verified: 80 full simulated solves (20/tier) with the chain followed step-by-step, 22,072 assertions (chain well-formedness, elimination soundness against the solution, step reproducibility), 0 errors/stuck. See `.claude/hint-chains-plan.md`.
+**Hint Chains (2026-07-07, hint-chains phase 2):** `findHint(board, solution)` now returns `{ steps: [...] }` instead of `{ type, cell }` — the full ordered chain of every technique the cascade applied to reach a placement, not just the final one. Each step is exactly the detector's step object (`type`, `cell`, `patternCells`, and `eliminations` or `placement`); recording stops at the first `placement` step, or returns `{ type: 'stuck' }` if the cascade gets stuck first (partial chains are discarded, not surfaced). `{ type: 'error' }` is unchanged. This replaces the old fallback-tracking logic in `findHint` entirely. Verified: 80 full simulated solves (20/tier) with the chain followed step-by-step, 22,072 assertions (chain well-formedness, elimination soundness against the solution, step reproducibility), 0 errors/stuck.
+
+**Hint Chains state model (2026-07-07, hint-chains phase 3):** `state.js` now stores the chain directly (`hintChain`/`hintStep`) instead of a single cell/technique; see "Hint / Peek System" above for the derived getters, stepper actions, and stricter invalidation rule. Verified with a Node smoke test stubbing the browser globals: 21 assertions covering chain population, stepper clamping, invalidation from every mutator, and undo/redo carrying the chain correctly.
+
+**Hint Chains UI (2026-07-07, hint-chains phase 4 — feature complete):** the pill became a real stepper and the grid gained per-step highlighting; see "Hint Chain Cell Highlights" and "Hint Technique Pill (Stepper)" above for the details. This was the last phase — the hint-chains feature (spec in todo.md) has fully shipped. Verified in a real headless-Chromium browser against a local static server: stepped real 4-step and 7-step Very Hard chains and confirmed highlight sets genuinely differ per step, Prev/Next clamp and re-enable correctly at both boundaries, dismiss hides only the pill (grid highlights + chain persist), filling a cell clears both, both themes render the new purple tones legibly, and zero browser console errors throughout. Phase 5 (chain relevance pruning) remains optional. See `.claude/hint-chains-plan.md`.
 
 ### State Schema (localStorage key: `sudoku-save`)
 ```json
@@ -84,17 +88,27 @@ Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a pu
 
 ### Hint / Peek System
 Single `🔍 Hint` button with two modes:
-- **Hint mode** (`🔍 Hint`): calls `findHint()` in `generator.js`, which runs the full technique cascade and returns `{ steps: [...] }` — the ordered chain of every technique applied from the current board to a placement (see "Hint Chains" below). `state.getHint()` currently carries a **temporary adapter** (hint-chains phase 2, pending phases 3–4): it reads `hintCell`/`hintTechnique` off the chain's *last* step, so the pill still shows one technique name, but it's now the final step in the chain rather than the earliest eliminating technique that fired. Increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
-- **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`. `hintCell`/`hintTechnique` cleared only when the hinted cell has a value.
-- `hintCell`/`hintTechnique` also cleared when the player fills that cell themselves (in `setValue()`).
-- Undo restores both `hintCell` and `hintTechnique` (both in the history snapshot).
+- **Hint mode** (`🔍 Hint`): calls `findHint()` in `generator.js`, which returns `{ steps: [...] }` — the ordered chain of every technique applied from the current board to a placement (see "Hint Chains" below). `state.getHint()` stores it as `hintChain` (steps array) + `hintStep` (index, starts at 0), increments `hintsPointed` once per chain, and selects the placement cell. Button label changes to `👁 Peek`.
+  - `hintCell`/`hintTechnique` are **derived getters** over the chain (kept for the Peek button flow): `hintCell` = the chain's last step's placement cell (or -1 with no chain); `hintTechnique` = the *current* step's type, i.e. `hintChain[hintStep].type`.
+  - `hintStepNext()`/`hintStepPrev()` advance/retreat `hintStep`, clamped to `[0, chain.length-1]`, emitting `hintstepchanged` — consumed by `renderHintStep()` in `ui.js` (full `renderAll()` + pill update, since a step's highlighted cells can be scattered anywhere on the board).
+- **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`.
+- **Invalidation (stricter than the pre-chain version)**: the whole chain is cleared — via a shared `invalidateHint()` — on *any* board mutation: `setValue`, `clearCell`, `toggleNote`, `fillCandidates`, `fillAllCandidates`, `peekCell`. Previously only clearing the specific hinted cell cleared the hint; now any mutation does, since a recorded chain's eliminations are only valid against the exact candidate state they were computed from.
+- Undo/redo carry `hintChain`/`hintStep` in the history snapshot exactly as they carried `hintCell`/`hintTechnique` before — restoring a snapshot naturally restores whatever chain (or lack of one) was active at that point.
 - Header shows: `🔍N` (pointer count) · `👁N` (reveal count) — both hidden when 0.
 
-### Hint Technique Pill
-When `settings.showStrategyOnHint` is true, a dismissible pill floats above the controls showing the technique name (mapped from the `hintTechnique` key via `TECHNIQUE_LABELS` in `ui.js`).
+### Hint Chain Cell Highlights
+`renderCell()` in `ui.js` reads `state.hintChain[state.hintStep]` on every render:
+- The **final step** (always a naked/hidden single — the only two detectors with `.placement`) keeps the pre-chain `.hint-cell` treatment on the placement cell — though in practice that cell is already `.selected` (from `getHint()`'s `selectCell()` call), which takes visual priority.
+- **Earlier steps** get two new classes: `.hint-pattern` on every cell in `step.patternCells` (the cells that justify the technique — strong purple, `--hint-pattern-bg`), and `.hint-elim` on every cell targeted by `step.eliminations` (candidates being removed — muted purple/lavender, `--hint-elim-bg`). Both have light/dark custom-property pairs chosen not to collide with peer/match/legal/conflict/hover colors.
+- Stretch goal included: a note digit that an elim step removes gets `.note.eliminated` (strike-through, conflict-red) if the player has that candidate noted.
+- These three classes are mutually exclusive with `.selected` and the peer/match/legal group in `renderCell()`'s if/else chain — same precedence pattern the old single `.hint-cell` class used.
+
+### Hint Technique Pill (Stepper)
+When a hint chain is active, a dismissible pill floats above the controls: `‹ Step 2 of 4 — Hidden Pair ›` when `settings.showStrategyOnHint` is true, or just `‹ Step 2 of 4 ›` when it's false (the step count itself is useful even without technique names — a deliberate change from the pre-chain pill, which hid entirely when the setting was off).
 - Element: `#hint-technique` at body level (sibling of `#app`), `position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 184px)` — keeps it above `#controls` on all devices.
-- Close button (`#hint-technique-close`) sets `_techniqueDismissed = true` in `ui.js`; next hint resets the flag.
-- Confirmed working on iPad Safari (2026-07-06). Earlier "not appearing" reports were caused by testing a stale cached app version, not a code bug.
+- `#hint-step-prev`/`#hint-step-next` (`.hint-step-btn`, 44×44px touch targets) call `state.hintStepPrev()`/`hintStepNext()`; disabled at the chain's boundaries via `updateHintTechnique()` in `ui.js`.
+- Close button (`#hint-technique-close`) sets `_techniqueDismissed = true` in `ui.js`; next hint resets the flag. Dismissing only hides the pill text — grid highlights and the chain persist (same precedent as the pre-chain pill).
+- Confirmed working on iPad Safari as a plain pill (2026-07-06); the phase-4 stepper controls (Prev/Next sizing/spacing, purple highlight legibility) verified so far only in a desktop headless-Chromium browser — see Potential Issues to Watch in todo.md for the on-device follow-up.
 
 ### Header Stats
 Three emoji counters, all hidden when zero (using HTML `hidden` attribute set in JS):
@@ -191,9 +205,10 @@ Changing defaults in `settings.js` only affects fresh installs (no prior `sudoku
 - Header stats (`#header-stats`): flex row with `❌N` / `🔍N` / `👁N` spans. Each span uses HTML `hidden` attribute (toggled in JS) to disappear when count is 0.
 - Completion animation: `.cell.completing` + `@keyframes completion-flash` (gold rgba); `transition: none` on `.completing` to prevent the cell's normal `transition: background` from interfering.
 - Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
+- Hint stepper (`.hint-step-btn`): `min-width/min-height: 44px` for the touch target while keeping the pill's font-size small — the pill's height grows to fit the 44px buttons (flex `align-items: center`), a deliberate tradeoff of pill compactness for iPad touch accessibility.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v36`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v38`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - **Update flow**: install handler does NOT call `skipWaiting()`. New SW installs, then waits. App detects `reg.waiting` (or `updatefound` → `statechange === 'installed'`) and shows "Update available" row in Settings → App group. User taps "Update" → `postMessage('SKIP_WAITING')` → SW activates → `controllerchange` → `location.reload()`. Settings (localStorage) survive the reload.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
