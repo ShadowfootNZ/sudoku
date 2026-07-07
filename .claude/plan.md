@@ -53,8 +53,10 @@ sudoku/
 ### Generator
 Runs synchronously on main thread (NOT a Web Worker — module Workers failed silently in Safari and Firefox). Wrapped in double `requestAnimationFrame` in `startNewGame()` so the browser paints the loading screen before the synchronous work blocks the thread.
 
-Difficulty clue counts: easy=36, medium=30, hard=25, veryhard=22.
+Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a puzzle using only human techniques (Naked/Hidden Single → Pointing/Box-Line → Naked/Hidden Pair → Naked Triple/X-Wing/Swordfish/XY-Wing/Unique Rectangle) and returns the hardest tier actually required: easy/medium/hard/veryhard. Hidden Pair, Naked Triple, X-Wing, Swordfish, XY-Wing, and Unique Rectangle are all grouped into the single "veryhard" tier (originally split into veryhard/expert, but that split was too narrow a band to land on reliably — see below — so it was merged). `createPuzzle()` digs cells one at a time, keeping a removal only if the puzzle still grades at or below the target (never overshoots), down to a per-tier clue floor (easy=36, medium=30, hard=24, veryhard=17). `generateGraded()` retries with a fresh solution (up to 12x) only if a single dig doesn't land exactly on target, and always falls back to the closest grade achieved *below* the target — never silently serving an easier puzzle by more than one tier.
 `countSolutions()` uses MRV (Minimum Remaining Values) heuristic, stops at 2 — fast uniqueness check.
+
+**History:** "Very Hard" and "Expert" briefly existed as separate tiers, but Expert's techniques (Swordfish/XY-Wing/Unique Rectangle) kick in so close to Veryhard's (Hidden Pair/Naked Triple/X-Wing) that grids needing more than X-Wing almost always needed Expert-tier techniques too — Veryhard hit its exact target only ~10-15% of the time. Merging them into one wider "veryhard" band raised the hit rate to ~70%+ with the same generation speed. Typical generation time ~60-300ms for hard/veryhard, ~10-20ms for easy/medium.
 
 ### State Schema (localStorage key: `sudoku-save`)
 ```json
@@ -86,7 +88,7 @@ Single `🔍 Hint` button with two modes:
 When `settings.showStrategyOnHint` is true, a dismissible pill floats above the controls showing the technique name (mapped from the `hintTechnique` key via `TECHNIQUE_LABELS` in `ui.js`).
 - Element: `#hint-technique` at body level (sibling of `#app`), `position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 184px)` — keeps it above `#controls` on all devices.
 - Close button (`#hint-technique-close`) sets `_techniqueDismissed = true` in `ui.js`; next hint resets the flag.
-- **Known issue**: pill not appearing on iPad Safari — root cause unresolved as of SW v28. On-device console debugging needed.
+- Confirmed working on iPad Safari (2026-07-06). Earlier "not appearing" reports were caused by testing a stale cached app version, not a code bug.
 
 ### Header Stats
 Three emoji counters, all hidden when zero (using HTML `hidden` attribute set in JS):

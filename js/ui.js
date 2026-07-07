@@ -172,6 +172,9 @@ const TECHNIQUE_LABELS = {
   'pointing':      'Pointing Pair/Triple',
   'box-line':      'Box-Line Reduction',
   'x-wing':        'X-Wing',
+  'swordfish':     'Swordfish',
+  'xy-wing':       'XY-Wing',
+  'unique-rectangle': 'Unique Rectangle',
 };
 
 let _techniqueDismissed = false;
