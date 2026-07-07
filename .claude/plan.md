@@ -15,7 +15,7 @@ A Sudoku game playable in Safari on iPad with Apple Pencil support. Hosted as a 
 sudoku/
 ├── index.html          # App shell, viewport meta, PWA meta tags
 ├── manifest.json       # PWA: standalone, portrait, icons
-├── sw.js               # Cache-first service worker (currently v34)
+├── sw.js               # Cache-first service worker (currently v36)
 ├── icons/
 │   ├── icon-192.png          # Original sudoku PWA icon (kept for SW cache)
 │   ├── icon-512.png          # Original sudoku PWA icon; used as apple-touch-icon
@@ -58,7 +58,11 @@ Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a pu
 
 **History:** "Very Hard" and "Expert" briefly existed as separate tiers, but Expert's techniques (Swordfish/XY-Wing/Unique Rectangle) kick in so close to Veryhard's (Hidden Pair/Naked Triple/X-Wing) that grids needing more than X-Wing almost always needed Expert-tier techniques too — Veryhard hit its exact target only ~10-15% of the time. Merging them into one wider "veryhard" band raised the hit rate to ~70%+ with the same generation speed. Typical generation time ~60-300ms for hard/veryhard, ~10-20ms for easy/medium.
 
-**Unique Rectangle (2026-07-07 fix):** the UR Type 1 detector lives in one module-level helper `tryUniqueRectangle(cands, elim)` shared by `gradePuzzle` and `findHint` (previously duplicated inline in both). Three detection misses were fixed: vertical rectangles were never matched (guard now `sameBand XOR sameStack` — corners must span exactly two boxes); the target corner needed BOTH pair digits (now whichever of A/B is present is eliminated, since the uniqueness argument covers each independently); and a bivalue target with a different pair was miscounted as a fourth floor corner (helper now tries each corner as target, requiring the other three to share the pair). Result: veryhard hit rate ~63%→~83%, UR firings ~5x more frequent, generation slightly faster.
+**Unique Rectangle (2026-07-07 fix):** three detection misses were fixed: vertical rectangles were never matched (guard now `sameBand XOR sameStack` — corners must span exactly two boxes); the target corner needed BOTH pair digits (now whichever of A/B is present is eliminated, since the uniqueness argument covers each independently); and a bivalue target with a different pair was miscounted as a fourth floor corner (the detector tries each corner as target, requiring the other three to share the pair). Result: veryhard hit rate ~63%→~83%, UR firings ~5x more frequent, generation slightly faster.
+
+**Unified technique cascade (2026-07-07, hint-chains phase 1):** the 11 technique blocks previously duplicated across `gradePuzzle` and `findHint` are now one shared table. Each detector (`findNakedSingle` … `findUniqueRectangle`) scans the candidate grid read-only and returns the first applicable step — `{ type, cell, patternCells, eliminations }` for elimination techniques, `{ type, cell, patternCells, placement }` for singles — or null. `DETECTORS` fixes the cascade order, `TECH_RANK` maps type→difficulty rank, `findStep()` returns the first match. `gradePuzzle` is a thin driver that applies the step and restarts the cascade from the top. Refactor verified behaviorally identical (0 mismatches over 101 grade + 5,220 hint comparisons) at unchanged speed.
+
+**Hint Chains (2026-07-07, hint-chains phase 2):** `findHint(board, solution)` now returns `{ steps: [...] }` instead of `{ type, cell }` — the full ordered chain of every technique the cascade applied to reach a placement, not just the final one. Each step is exactly the detector's step object (`type`, `cell`, `patternCells`, and `eliminations` or `placement`); recording stops at the first `placement` step, or returns `{ type: 'stuck' }` if the cascade gets stuck first (partial chains are discarded, not surfaced). `{ type: 'error' }` is unchanged. This replaces the old fallback-tracking logic in `findHint` entirely. The UI doesn't yet consume the chain — `state.getHint()` has a temporary adapter reading the last step (see Hint/Peek System above) until phases 3–4 (state model + stepper UI) land. Verified: 80 full simulated solves (20/tier) with the chain followed step-by-step, 22,072 assertions (chain well-formedness, elimination soundness against the solution, step reproducibility), 0 errors/stuck. See `.claude/hint-chains-plan.md`.
 
 ### State Schema (localStorage key: `sudoku-save`)
 ```json
@@ -80,7 +84,7 @@ Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a pu
 
 ### Hint / Peek System
 Single `🔍 Hint` button with two modes:
-- **Hint mode** (`🔍 Hint`): calls `findHint()` in `generator.js`, which runs the full technique cascade (Naked Single → Hidden Single → Pointing → Box-Line → Naked Pair → Hidden Pair → Naked Triple → X-Wing) and returns `{ type, cell }`. Stores `hintCell` (index) and `hintTechnique` (string key e.g. `'naked-single'`). Increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
+- **Hint mode** (`🔍 Hint`): calls `findHint()` in `generator.js`, which runs the full technique cascade and returns `{ steps: [...] }` — the ordered chain of every technique applied from the current board to a placement (see "Hint Chains" below). `state.getHint()` currently carries a **temporary adapter** (hint-chains phase 2, pending phases 3–4): it reads `hintCell`/`hintTechnique` off the chain's *last* step, so the pill still shows one technique name, but it's now the final step in the chain rather than the earliest eliminating technique that fired. Increments `hintsPointed`, selects the cell. Button label changes to `👁 Peek`.
 - **Peek mode** (`👁 Peek`): reveals the solution value for the **currently selected cell** (not necessarily `hintCell`), increments `hintsUsed`. `hintCell`/`hintTechnique` cleared only when the hinted cell has a value.
 - `hintCell`/`hintTechnique` also cleared when the player fills that cell themselves (in `setValue()`).
 - Undo restores both `hintCell` and `hintTechnique` (both in the history snapshot).
@@ -189,7 +193,7 @@ Changing defaults in `settings.js` only affects fresh installs (no prior `sudoku
 - Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v34`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v36`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - **Update flow**: install handler does NOT call `skipWaiting()`. New SW installs, then waits. App detects `reg.waiting` (or `updatefound` → `statechange === 'installed'`) and shows "Update available" row in Settings → App group. User taps "Update" → `postMessage('SKIP_WAITING')` → SW activates → `controllerchange` → `location.reload()`. Settings (localStorage) survive the reload.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.

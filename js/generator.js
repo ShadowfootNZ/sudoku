@@ -160,14 +160,298 @@ export function createPuzzle(solution, difficulty) {
   return puzzle;
 }
 
-// Unique Rectangle Type 1 helper, shared by gradePuzzle and findHint.
-// Three corners of a rectangle spanning exactly two boxes hold the same
-// bivalue pair {A,B}; if the fourth corner also resolved to A or B, the four
-// corners would form a deadly pattern with two interchangeable solutions,
-// contradicting uniqueness — so whichever of A/B the fourth corner holds can
-// be eliminated. Returns the target cell index if an elimination was applied,
-// else null.
-const tryUniqueRectangle = (cands, elim) => {
+// ---------------------------------------------------------------------------
+// Technique detectors, shared by gradePuzzle and findHint.
+//
+// Each detector scans a candidate grid (read-only, never mutates) and returns
+// the FIRST applicable step in its fixed scan order, or null:
+//   { type, cell, patternCells, eliminations: [{cell, digit}, ...] }
+//   { type, cell, patternCells, placement: {cell, digit} }
+// - `patternCells` are the cells that justify the technique (pair cells,
+//   X-Wing corners, XY-Wing pivot+wings, ...).
+// - `eliminations` list only candidates actually present (applying them
+//   always changes the grid); a step is only returned when non-empty.
+// - `cell` is the hint-pointer cell shown to the player (kept identical to
+//   the pre-refactor per-technique choice: first pattern cell for most,
+//   first elimination cell for Swordfish, the target for Unique Rectangle).
+// The drivers apply the step and restart the cascade from the top, so
+// detector order in DETECTORS is the difficulty cascade.
+// ---------------------------------------------------------------------------
+
+const buildCands = (board) => board.map((v, i) =>
+  v !== 0 ? null : new Set([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => isValid(board, i, d)))
+);
+
+// Naked Single (Easy): cell has exactly one candidate
+const findNakedSingle = (cands) => {
+  for (let i = 0; i < 81; i++) {
+    if (cands[i]?.size !== 1) continue;
+    return { type: 'naked-single', cell: i, patternCells: [i], placement: { cell: i, digit: [...cands[i]][0] } };
+  }
+  return null;
+};
+
+// Hidden Single (Medium): digit has only one possible cell in a unit
+const findHiddenSingle = (cands) => {
+  for (let u = 0; u < 27; u++) {
+    for (let d = 1; d <= 9; d++) {
+      const cs = UNITS[u].filter(i => cands[i]?.has(d));
+      if (cs.length !== 1) continue;
+      return { type: 'hidden-single', cell: cs[0], patternCells: [cs[0]], unit: u, placement: { cell: cs[0], digit: d } };
+    }
+  }
+  return null;
+};
+
+// Pointing Pair/Triple (Hard): candidate confined to one row/col within a box
+const findPointing = (cands) => {
+  for (let b = 18; b < 27; b++) {
+    const box = UNITS[b];
+    for (let d = 1; d <= 9; d++) {
+      const cs = box.filter(i => cands[i]?.has(d));
+      if (cs.length < 2) continue;
+      const elims = [];
+      const rows = new Set(cs.map(cellRow));
+      if (rows.size === 1) {
+        for (const i of UNITS[[...rows][0]]) {
+          if (!box.includes(i) && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+        }
+      }
+      const cols = new Set(cs.map(cellCol));
+      if (cols.size === 1) {
+        for (const i of UNITS[9 + [...cols][0]]) {
+          if (!box.includes(i) && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+        }
+      }
+      if (elims.length) return { type: 'pointing', cell: cs[0], patternCells: cs, eliminations: elims };
+    }
+  }
+  return null;
+};
+
+// Box-Line Reduction (Hard): candidate confined to one box within a row/col
+const findBoxLine = (cands) => {
+  for (let u = 0; u < 18; u++) {
+    const unit = UNITS[u];
+    for (let d = 1; d <= 9; d++) {
+      const cs = unit.filter(i => cands[i]?.has(d));
+      if (cs.length < 2) continue;
+      const boxes = new Set(cs.map(cellBox));
+      if (boxes.size !== 1) continue;
+      const elims = [];
+      for (const i of UNITS[18 + [...boxes][0]]) {
+        if (!unit.includes(i) && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+      }
+      if (elims.length) return { type: 'box-line', cell: cs[0], patternCells: cs, eliminations: elims };
+    }
+  }
+  return null;
+};
+
+// Naked Pair (Hard): two cells in a unit share the same two candidates
+const findNakedPair = (cands) => {
+  for (const unit of UNITS) {
+    const twos = unit.filter(i => cands[i]?.size === 2);
+    for (let a = 0; a < twos.length - 1; a++) {
+      for (let b = a + 1; b < twos.length; b++) {
+        const ca = cands[twos[a]], cb = cands[twos[b]];
+        if (![...ca].every(v => cb.has(v))) continue;
+        const elims = [];
+        for (const i of unit) {
+          if (i === twos[a] || i === twos[b]) continue;
+          for (const v of ca) if (cands[i]?.has(v)) elims.push({ cell: i, digit: v });
+        }
+        if (elims.length) return { type: 'naked-pair', cell: twos[a], patternCells: [twos[a], twos[b]], eliminations: elims };
+      }
+    }
+  }
+  return null;
+};
+
+// Hidden Pair (Hard): two digits each confined to the same two cells in a unit
+const findHiddenPair = (cands) => {
+  for (const unit of UNITS) {
+    for (let d1 = 1; d1 <= 8; d1++) {
+      const c1 = unit.filter(i => cands[i]?.has(d1));
+      if (c1.length !== 2) continue;
+      for (let d2 = d1 + 1; d2 <= 9; d2++) {
+        const c2 = unit.filter(i => cands[i]?.has(d2));
+        if (c2.length !== 2 || c1[0] !== c2[0] || c1[1] !== c2[1]) continue;
+        const elims = [];
+        for (const i of c1) {
+          for (const v of cands[i]) {
+            if (v !== d1 && v !== d2) elims.push({ cell: i, digit: v });
+          }
+        }
+        if (elims.length) return { type: 'hidden-pair', cell: c1[0], patternCells: [...c1], eliminations: elims };
+      }
+    }
+  }
+  return null;
+};
+
+// Naked Triple (Very Hard): three cells share a combined set of exactly three candidates
+const findNakedTriple = (cands) => {
+  for (const unit of UNITS) {
+    const smalls = unit.filter(i => cands[i] && cands[i].size >= 2 && cands[i].size <= 3);
+    for (let a = 0; a < smalls.length - 2; a++) {
+      for (let b = a + 1; b < smalls.length - 1; b++) {
+        for (let c = b + 1; c < smalls.length; c++) {
+          const combo = new Set([...cands[smalls[a]], ...cands[smalls[b]], ...cands[smalls[c]]]);
+          if (combo.size !== 3) continue;
+          const elims = [];
+          for (const i of unit) {
+            if (i === smalls[a] || i === smalls[b] || i === smalls[c]) continue;
+            for (const v of combo) if (cands[i]?.has(v)) elims.push({ cell: i, digit: v });
+          }
+          if (elims.length) {
+            return { type: 'naked-triple', cell: smalls[a], patternCells: [smalls[a], smalls[b], smalls[c]], eliminations: elims };
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+// X-Wing (Very Hard): digit in exactly two cells across two rows sharing the
+// same two columns (or the transpose)
+const findXWing = (cands) => {
+  for (let d = 1; d <= 9; d++) {
+    // Row-based
+    const rowPairs = [];
+    for (let r = 0; r < 9; r++) {
+      const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
+      if (cols.length === 2) rowPairs.push({ r, cols });
+    }
+    for (let a = 0; a < rowPairs.length - 1; a++) {
+      for (let b = a + 1; b < rowPairs.length; b++) {
+        const ra = rowPairs[a], rb = rowPairs[b];
+        if (ra.cols[0] !== rb.cols[0] || ra.cols[1] !== rb.cols[1]) continue;
+        const elims = [];
+        for (const col of ra.cols) {
+          for (const i of UNITS[9 + col]) {
+            if (cellRow(i) !== ra.r && cellRow(i) !== rb.r && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+          }
+        }
+        if (elims.length) {
+          const patternCells = [ra.r * 9 + ra.cols[0], ra.r * 9 + ra.cols[1], rb.r * 9 + rb.cols[0], rb.r * 9 + rb.cols[1]];
+          return { type: 'x-wing', cell: patternCells[0], patternCells, eliminations: elims };
+        }
+      }
+    }
+    // Col-based
+    const colPairs = [];
+    for (let c = 0; c < 9; c++) {
+      const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
+      if (rows.length === 2) colPairs.push({ c, rows });
+    }
+    for (let a = 0; a < colPairs.length - 1; a++) {
+      for (let b = a + 1; b < colPairs.length; b++) {
+        const ca = colPairs[a], cb = colPairs[b];
+        if (ca.rows[0] !== cb.rows[0] || ca.rows[1] !== cb.rows[1]) continue;
+        const elims = [];
+        for (const row of ca.rows) {
+          for (const i of UNITS[row]) {
+            if (cellCol(i) !== ca.c && cellCol(i) !== cb.c && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+          }
+        }
+        if (elims.length) {
+          const patternCells = [ca.rows[0] * 9 + ca.c, ca.rows[0] * 9 + cb.c, ca.rows[1] * 9 + ca.c, ca.rows[1] * 9 + cb.c];
+          return { type: 'x-wing', cell: patternCells[0], patternCells, eliminations: elims };
+        }
+      }
+    }
+  }
+  return null;
+};
+
+// Swordfish (Very Hard): digit confined to 2-3 cells per line across three
+// rows (or columns) whose candidate columns (or rows) union to just three.
+// `lines` are candidate-lines for digit `d` with 2-3 cross positions each.
+const findSwordfishIn = (cands, lines, byColumn, d) => {
+  for (let a = 0; a < lines.length - 2; a++) {
+    for (let b = a + 1; b < lines.length - 1; b++) {
+      for (let c = b + 1; c < lines.length; c++) {
+        const union = new Set([...lines[a].cross, ...lines[b].cross, ...lines[c].cross]);
+        if (union.size !== 3) continue;
+        const usedLines = [lines[a].line, lines[b].line, lines[c].line];
+        const elims = [];
+        for (const cross of union) {
+          const unit = byColumn ? UNITS[cross] : UNITS[9 + cross];
+          for (const i of unit) {
+            const lineOfI = byColumn ? cellCol(i) : cellRow(i);
+            if (!usedLines.includes(lineOfI) && cands[i]?.has(d)) elims.push({ cell: i, digit: d });
+          }
+        }
+        if (elims.length) {
+          const patternCells = [];
+          for (const line of usedLines) {
+            const unit = byColumn ? UNITS[9 + line] : UNITS[line];
+            for (const i of unit) if (cands[i]?.has(d)) patternCells.push(i);
+          }
+          return { type: 'swordfish', cell: elims[0].cell, patternCells, eliminations: elims };
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const findSwordfish = (cands) => {
+  for (let d = 1; d <= 9; d++) {
+    const rowLines = [];
+    for (let r = 0; r < 9; r++) {
+      const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
+      if (cols.length >= 2 && cols.length <= 3) rowLines.push({ line: r, cross: cols });
+    }
+    let step = findSwordfishIn(cands, rowLines, false, d);
+    if (step) return step;
+
+    const colLines = [];
+    for (let c = 0; c < 9; c++) {
+      const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
+      if (rows.length >= 2 && rows.length <= 3) colLines.push({ line: c, cross: rows });
+    }
+    step = findSwordfishIn(cands, colLines, true, d);
+    if (step) return step;
+  }
+  return null;
+};
+
+// XY-Wing (Very Hard): pivot with candidates {x,y}; wings {x,z} and {y,z}
+// (each a peer of the pivot) let z be eliminated from any cell seeing both wings
+const findXYWing = (cands) => {
+  for (let p = 0; p < 81; p++) {
+    if (!cands[p] || cands[p].size !== 2) continue;
+    const [x, y] = [...cands[p]];
+    const peerCells = PEERS[p].filter(i => cands[i]?.size === 2);
+    const w1cands = peerCells.filter(i => cands[i].has(x) && !cands[i].has(y));
+    const w2cands = peerCells.filter(i => cands[i].has(y) && !cands[i].has(x));
+
+    for (const w1 of w1cands) {
+      const z1 = [...cands[w1]].find(v => v !== x);
+      for (const w2 of w2cands) {
+        if (w2 === w1) continue;
+        const z2 = [...cands[w2]].find(v => v !== y);
+        if (z1 !== z2) continue;
+        const z = z1;
+        const elims = PEERS[w1]
+          .filter(i => i !== p && PEERS[w2].includes(i) && cands[i]?.has(z))
+          .map(i => ({ cell: i, digit: z }));
+        if (elims.length) return { type: 'xy-wing', cell: p, patternCells: [p, w1, w2], eliminations: elims };
+      }
+    }
+  }
+  return null;
+};
+
+// Unique Rectangle Type 1 (Very Hard): three corners of a rectangle spanning
+// exactly two boxes hold the same bivalue pair {A,B}; if the fourth corner
+// also resolved to A or B, the four corners would form a deadly pattern with
+// two interchangeable solutions, contradicting uniqueness — so whichever of
+// A/B the fourth corner holds can be eliminated.
+const findUniqueRectangle = (cands) => {
   for (let r1 = 0; r1 < 9; r1++) {
     for (let r2 = r1 + 1; r2 < 9; r2++) {
       const sameBand = Math.floor(r1 / 3) === Math.floor(r2 / 3);
@@ -192,13 +476,44 @@ const tryUniqueRectangle = (cands, elim) => {
             // one other candidate so the cell isn't emptied
             const present = [A, B].filter(d => cands[target].has(d));
             if (present.length === 0 || cands[target].size === present.length) continue;
-            let changed = false;
-            for (const d of present) changed = elim(target, d) || changed;
-            if (changed) return target;
+            return {
+              type: 'unique-rectangle', cell: target, patternCells: [...floor, target],
+              eliminations: present.map(d => ({ cell: target, digit: d })),
+            };
           }
         }
       }
     }
+  }
+  return null;
+};
+
+// Cascade order = difficulty order; drivers restart from the top after every
+// applied step, so easier techniques always win when applicable.
+const DETECTORS = [
+  findNakedSingle, findHiddenSingle, findPointing, findBoxLine, findNakedPair,
+  findHiddenPair, findNakedTriple, findXWing, findSwordfish, findXYWing,
+  findUniqueRectangle,
+];
+
+const TECH_RANK = {
+  'naked-single':     GRADE_ORDER.easy,
+  'hidden-single':    GRADE_ORDER.medium,
+  'pointing':         GRADE_ORDER.hard,
+  'box-line':         GRADE_ORDER.hard,
+  'naked-pair':       GRADE_ORDER.hard,
+  'hidden-pair':      GRADE_ORDER.hard,
+  'naked-triple':     GRADE_ORDER.veryhard,
+  'x-wing':           GRADE_ORDER.veryhard,
+  'swordfish':        GRADE_ORDER.veryhard,
+  'xy-wing':          GRADE_ORDER.veryhard,
+  'unique-rectangle': GRADE_ORDER.veryhard,
+};
+
+const findStep = (cands) => {
+  for (const detect of DETECTORS) {
+    const step = detect(cands);
+    if (step) return step;
   }
   return null;
 };
@@ -208,256 +523,21 @@ const tryUniqueRectangle = (cands, elim) => {
 // hardest technique needed, or null if the grader gets stuck (puzzle needs guessing).
 function gradePuzzle(puzzle) {
   const board = [...puzzle];
-  const cands = board.map((v, i) =>
-    v !== 0 ? null : new Set([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => isValid(board, i, d)))
-  );
+  const cands = buildCands(board);
+  let hardest = GRADE_ORDER.easy;
 
-  const G = GRADE_ORDER;
-  let hardest = G.easy;
-
-  const place = (i, v) => {
-    board[i] = v;
-    cands[i] = null;
-    for (const p of PEERS[i]) cands[p]?.delete(v);
-  };
-
-  const elim = (i, v) => {
-    if (!cands[i] || !cands[i].has(v)) return false;
-    cands[i].delete(v);
-    return true;
-  };
-
-  // Swordfish helper: `lines` are candidate-lines for digit `d` with 2-3 cross
-  // positions each; if three of them union to exactly 3 cross positions, `d`
-  // can be eliminated from those cross lines outside the three base lines.
-  const trySwordfish = (lines, byColumn, d) => {
-    for (let a = 0; a < lines.length - 2; a++) {
-      for (let b = a + 1; b < lines.length - 1; b++) {
-        for (let c = b + 1; c < lines.length; c++) {
-          const union = new Set([...lines[a].cross, ...lines[b].cross, ...lines[c].cross]);
-          if (union.size !== 3) continue;
-          const usedLines = [lines[a].line, lines[b].line, lines[c].line];
-          let changed = false;
-          for (const cross of union) {
-            const unit = byColumn ? UNITS[cross] : UNITS[9 + cross];
-            for (const i of unit) {
-              const lineOfI = byColumn ? cellCol(i) : cellRow(i);
-              if (!usedLines.includes(lineOfI)) changed = elim(i, d) || changed;
-            }
-          }
-          if (changed) return true;
-        }
-      }
+  for (;;) {
+    const step = findStep(cands);
+    if (!step) break; // no technique made progress — grader is stuck
+    hardest = Math.max(hardest, TECH_RANK[step.type]);
+    if (step.placement) {
+      const { cell, digit } = step.placement;
+      board[cell] = digit;
+      cands[cell] = null;
+      for (const p of PEERS[cell]) cands[p]?.delete(digit);
+    } else {
+      for (const { cell, digit } of step.eliminations) cands[cell].delete(digit);
     }
-    return false;
-  };
-
-  outer: while (true) {
-
-    // Naked Single (Easy): cell has exactly one candidate
-    for (let i = 0; i < 81; i++) {
-      if (!cands[i] || cands[i].size !== 1) continue;
-      place(i, [...cands[i]][0]);
-      continue outer;
-    }
-
-    // Hidden Single (Medium): digit has only one possible cell in a unit
-    for (const unit of UNITS) {
-      for (let d = 1; d <= 9; d++) {
-        const cs = unit.filter(i => cands[i]?.has(d));
-        if (cs.length !== 1) continue;
-        hardest = Math.max(hardest, G.medium);
-        place(cs[0], d);
-        continue outer;
-      }
-    }
-
-    // Pointing Pair/Triple (Hard): candidate confined to one row/col within a box
-    for (let b = 18; b < 27; b++) {
-      const box = UNITS[b];
-      for (let d = 1; d <= 9; d++) {
-        const cs = box.filter(i => cands[i]?.has(d));
-        if (cs.length < 2) continue;
-        let changed = false;
-        const rows = new Set(cs.map(cellRow));
-        if (rows.size === 1) {
-          for (const i of UNITS[[...rows][0]]) {
-            if (!box.includes(i)) changed = elim(i, d) || changed;
-          }
-        }
-        const cols = new Set(cs.map(cellCol));
-        if (cols.size === 1) {
-          for (const i of UNITS[9 + [...cols][0]]) {
-            if (!box.includes(i)) changed = elim(i, d) || changed;
-          }
-        }
-        if (changed) { hardest = Math.max(hardest, G.hard); continue outer; }
-      }
-    }
-
-    // Box-Line Reduction (Hard): candidate confined to one box within a row/col
-    for (let u = 0; u < 18; u++) {
-      const unit = UNITS[u];
-      for (let d = 1; d <= 9; d++) {
-        const cs = unit.filter(i => cands[i]?.has(d));
-        if (cs.length < 2) continue;
-        const boxes = new Set(cs.map(cellBox));
-        if (boxes.size !== 1) continue;
-        const boxUnit = UNITS[18 + [...boxes][0]];
-        let changed = false;
-        for (const i of boxUnit) {
-          if (!unit.includes(i)) changed = elim(i, d) || changed;
-        }
-        if (changed) { hardest = Math.max(hardest, G.hard); continue outer; }
-      }
-    }
-
-    // Naked Pair (Hard): two cells in a unit share the same two candidates
-    for (const unit of UNITS) {
-      const twos = unit.filter(i => cands[i]?.size === 2);
-      for (let a = 0; a < twos.length - 1; a++) {
-        for (let b = a + 1; b < twos.length; b++) {
-          const ca = cands[twos[a]], cb = cands[twos[b]];
-          if (![...ca].every(v => cb.has(v))) continue;
-          let changed = false;
-          for (const i of unit) {
-            if (i === twos[a] || i === twos[b]) continue;
-            for (const v of ca) changed = elim(i, v) || changed;
-          }
-          if (changed) { hardest = Math.max(hardest, G.hard); continue outer; }
-        }
-      }
-    }
-
-    // Hidden Pair (Hard): two digits each confined to the same two cells in a unit
-    for (const unit of UNITS) {
-      for (let d1 = 1; d1 <= 8; d1++) {
-        const c1 = unit.filter(i => cands[i]?.has(d1));
-        if (c1.length !== 2) continue;
-        for (let d2 = d1 + 1; d2 <= 9; d2++) {
-          const c2 = unit.filter(i => cands[i]?.has(d2));
-          if (c2.length !== 2 || c1[0] !== c2[0] || c1[1] !== c2[1]) continue;
-          let changed = false;
-          for (const i of c1) {
-            for (const v of [...cands[i]]) {
-              if (v !== d1 && v !== d2) changed = elim(i, v) || changed;
-            }
-          }
-          if (changed) { hardest = Math.max(hardest, G.hard); continue outer; }
-        }
-      }
-    }
-
-    // Naked Triple (Very Hard): three cells share a combined set of exactly three candidates
-    for (const unit of UNITS) {
-      const smalls = unit.filter(i => cands[i] && cands[i].size >= 2 && cands[i].size <= 3);
-      for (let a = 0; a < smalls.length - 2; a++) {
-        for (let b = a + 1; b < smalls.length - 1; b++) {
-          for (let c = b + 1; c < smalls.length; c++) {
-            const combo = new Set([...cands[smalls[a]], ...cands[smalls[b]], ...cands[smalls[c]]]);
-            if (combo.size !== 3) continue;
-            let changed = false;
-            for (const i of unit) {
-              if (i === smalls[a] || i === smalls[b] || i === smalls[c]) continue;
-              for (const v of combo) changed = elim(i, v) || changed;
-            }
-            if (changed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-          }
-        }
-      }
-    }
-
-    // X-Wing (Very Hard): digit in exactly two cells across two rows sharing the same two columns
-    for (let d = 1; d <= 9; d++) {
-      // Row-based
-      const rowPairs = [];
-      for (let r = 0; r < 9; r++) {
-        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
-        if (cols.length === 2) rowPairs.push({ r, cols });
-      }
-      for (let a = 0; a < rowPairs.length - 1; a++) {
-        for (let b = a + 1; b < rowPairs.length; b++) {
-          const ra = rowPairs[a], rb = rowPairs[b];
-          if (ra.cols[0] !== rb.cols[0] || ra.cols[1] !== rb.cols[1]) continue;
-          let changed = false;
-          for (const col of ra.cols) {
-            for (const i of UNITS[9 + col]) {
-              if (cellRow(i) !== ra.r && cellRow(i) !== rb.r) changed = elim(i, d) || changed;
-            }
-          }
-          if (changed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-        }
-      }
-      // Col-based
-      const colPairs = [];
-      for (let c = 0; c < 9; c++) {
-        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
-        if (rows.length === 2) colPairs.push({ c, rows });
-      }
-      for (let a = 0; a < colPairs.length - 1; a++) {
-        for (let b = a + 1; b < colPairs.length; b++) {
-          const ca = colPairs[a], cb = colPairs[b];
-          if (ca.rows[0] !== cb.rows[0] || ca.rows[1] !== cb.rows[1]) continue;
-          let changed = false;
-          for (const row of ca.rows) {
-            for (const i of UNITS[row]) {
-              if (cellCol(i) !== ca.c && cellCol(i) !== cb.c) changed = elim(i, d) || changed;
-            }
-          }
-          if (changed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-        }
-      }
-    }
-
-    // Swordfish (Very Hard): digit confined to 2-3 cells per line across three
-    // rows (or columns) whose candidate columns (or rows) union to just three
-    for (let d = 1; d <= 9; d++) {
-      const rowLines = [];
-      for (let r = 0; r < 9; r++) {
-        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
-        if (cols.length >= 2 && cols.length <= 3) rowLines.push({ line: r, cross: cols });
-      }
-      if (trySwordfish(rowLines, false, d)) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-
-      const colLines = [];
-      for (let c = 0; c < 9; c++) {
-        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
-        if (rows.length >= 2 && rows.length <= 3) colLines.push({ line: c, cross: rows });
-      }
-      if (trySwordfish(colLines, true, d)) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-    }
-
-    // XY-Wing (Very Hard): pivot with candidates {x,y}; wings {x,z} and {y,z}
-    // (each a peer of the pivot) let z be eliminated from any cell seeing both wings
-    for (let p = 0; p < 81; p++) {
-      if (!cands[p] || cands[p].size !== 2) continue;
-      const [x, y] = [...cands[p]];
-      const peerCells = PEERS[p].filter(i => cands[i]?.size === 2);
-      const w1cands = peerCells.filter(i => cands[i].has(x) && !cands[i].has(y));
-      const w2cands = peerCells.filter(i => cands[i].has(y) && !cands[i].has(x));
-
-      let progressed = false;
-      for (const w1 of w1cands) {
-        const z1 = [...cands[w1]].find(v => v !== x);
-        for (const w2 of w2cands) {
-          if (w2 === w1) continue;
-          const z2 = [...cands[w2]].find(v => v !== y);
-          if (z1 !== z2) continue;
-          const z = z1;
-          const targets = PEERS[w1].filter(i => i !== p && PEERS[w2].includes(i) && cands[i]?.has(z));
-          let changed = false;
-          for (const t of targets) changed = elim(t, z) || changed;
-          if (changed) { progressed = true; break; }
-        }
-        if (progressed) break;
-      }
-      if (progressed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-    }
-
-    // Unique Rectangle Type 1 (Very Hard)
-    if (tryUniqueRectangle(cands, elim) !== null) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-
-    break; // No technique made progress — grader is stuck
   }
 
   if (board.some(v => v === 0)) return null;
@@ -465,296 +545,28 @@ function gradePuzzle(puzzle) {
 }
 
 // Technique-based hint finder.
-// Runs the same cascade as the grader on a fresh candidate grid (ignoring notes).
-// Returns { type, cell } where type is the technique used, or { type: 'error' } if
-// any placed value contradicts the solution, or { type: 'stuck' } if no technique applies.
-// For singles: cell is where the value should be placed.
-// For elimination techniques: cell is the first cell involved in the pattern; the
-// elimination is applied to the temporary grid and the cascade restarts, so a single
-// opening up after the elimination is returned instead.
+// Runs the same cascade as the grader on a fresh candidate grid (ignoring notes),
+// recording every applied step until a single opens up a placement. Returns
+// { steps: [...] } — the ordered chain of techniques from the current board to a
+// placeable digit, each step { type, cell, patternCells, eliminations } (or
+// `placement` on the final step) — or { type: 'error' } if any placed value
+// contradicts the solution, or { type: 'stuck' } if no technique applies before
+// a placement is reached (partial chains are not surfaced).
 export function findHint(board, solution) {
   for (let i = 0; i < 81; i++) {
     if (board[i] !== 0 && board[i] !== solution[i]) return { type: 'error' };
   }
 
-  const cands = board.map((v, i) =>
-    v !== 0 ? null : new Set([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(d => isValid(board, i, d)))
-  );
+  const cands = buildCands(board);
+  const steps = [];
 
-  const elim = (i, v) => {
-    if (!cands[i] || !cands[i].has(v)) return false;
-    cands[i].delete(v);
-    return true;
-  };
-
-  // Swordfish helper: mirrors the one in gradePuzzle, returning the first
-  // affected cell (for the hint pointer) instead of a plain boolean.
-  const trySwordfish = (lines, byColumn, d) => {
-    for (let a = 0; a < lines.length - 2; a++) {
-      for (let b = a + 1; b < lines.length - 1; b++) {
-        for (let c = b + 1; c < lines.length; c++) {
-          const union = new Set([...lines[a].cross, ...lines[b].cross, ...lines[c].cross]);
-          if (union.size !== 3) continue;
-          const usedLines = [lines[a].line, lines[b].line, lines[c].line];
-          let changed = false, firstCell = null;
-          for (const cross of union) {
-            const unit = byColumn ? UNITS[cross] : UNITS[9 + cross];
-            for (const i of unit) {
-              const lineOfI = byColumn ? cellCol(i) : cellRow(i);
-              if (!usedLines.includes(lineOfI) && elim(i, d)) {
-                changed = true;
-                if (firstCell === null) firstCell = i;
-              }
-            }
-          }
-          if (changed) return firstCell;
-        }
-      }
-    }
-    return null;
-  };
-
-  let fallback = null;
-
-  outer: while (true) {
-
-    // Naked Single
-    for (let i = 0; i < 81; i++) {
-      if (cands[i]?.size === 1) return { type: fallback?.type ?? 'naked-single', cell: i };
-    }
-
-    // Hidden Single
-    for (const unit of UNITS) {
-      for (let d = 1; d <= 9; d++) {
-        const cs = unit.filter(i => cands[i]?.has(d));
-        if (cs.length === 1) return { type: fallback?.type ?? 'hidden-single', cell: cs[0] };
-      }
-    }
-
-    // Pointing Pair/Triple
-    for (let b = 18; b < 27; b++) {
-      const box = UNITS[b];
-      for (let d = 1; d <= 9; d++) {
-        const cs = box.filter(i => cands[i]?.has(d));
-        if (cs.length < 2) continue;
-        let changed = false;
-        const rows = new Set(cs.map(cellRow));
-        if (rows.size === 1) {
-          for (const i of UNITS[[...rows][0]]) {
-            if (!box.includes(i)) changed = elim(i, d) || changed;
-          }
-        }
-        const cols = new Set(cs.map(cellCol));
-        if (cols.size === 1) {
-          for (const i of UNITS[9 + [...cols][0]]) {
-            if (!box.includes(i)) changed = elim(i, d) || changed;
-          }
-        }
-        if (changed) {
-          fallback = { type: 'pointing', cell: cs[0] };
-          continue outer;
-        }
-      }
-    }
-
-    // Box-Line Reduction
-    for (let u = 0; u < 18; u++) {
-      const unit = UNITS[u];
-      for (let d = 1; d <= 9; d++) {
-        const cs = unit.filter(i => cands[i]?.has(d));
-        if (cs.length < 2) continue;
-        const boxes = new Set(cs.map(cellBox));
-        if (boxes.size !== 1) continue;
-        const boxUnit = UNITS[18 + [...boxes][0]];
-        let changed = false;
-        for (const i of boxUnit) {
-          if (!unit.includes(i)) changed = elim(i, d) || changed;
-        }
-        if (changed) {
-          fallback = { type: 'box-line', cell: cs[0] };
-          continue outer;
-        }
-      }
-    }
-
-    // Naked Pair
-    for (const unit of UNITS) {
-      const twos = unit.filter(i => cands[i]?.size === 2);
-      for (let a = 0; a < twos.length - 1; a++) {
-        for (let b = a + 1; b < twos.length; b++) {
-          const ca = cands[twos[a]], cb = cands[twos[b]];
-          if (![...ca].every(v => cb.has(v))) continue;
-          let changed = false;
-          for (const i of unit) {
-            if (i === twos[a] || i === twos[b]) continue;
-            for (const v of ca) changed = elim(i, v) || changed;
-          }
-          if (changed) {
-            fallback = { type: 'naked-pair', cell: twos[a] };
-            continue outer;
-          }
-        }
-      }
-    }
-
-    // Hidden Pair
-    for (const unit of UNITS) {
-      for (let d1 = 1; d1 <= 8; d1++) {
-        const c1 = unit.filter(i => cands[i]?.has(d1));
-        if (c1.length !== 2) continue;
-        for (let d2 = d1 + 1; d2 <= 9; d2++) {
-          const c2 = unit.filter(i => cands[i]?.has(d2));
-          if (c2.length !== 2 || c1[0] !== c2[0] || c1[1] !== c2[1]) continue;
-          let changed = false;
-          for (const i of c1) {
-            for (const v of [...cands[i]]) {
-              if (v !== d1 && v !== d2) changed = elim(i, v) || changed;
-            }
-          }
-          if (changed) {
-            fallback = { type: 'hidden-pair', cell: c1[0] };
-            continue outer;
-          }
-        }
-      }
-    }
-
-    // Naked Triple
-    for (const unit of UNITS) {
-      const smalls = unit.filter(i => cands[i] && cands[i].size >= 2 && cands[i].size <= 3);
-      for (let a = 0; a < smalls.length - 2; a++) {
-        for (let b = a + 1; b < smalls.length - 1; b++) {
-          for (let c = b + 1; c < smalls.length; c++) {
-            const combo = new Set([...cands[smalls[a]], ...cands[smalls[b]], ...cands[smalls[c]]]);
-            if (combo.size !== 3) continue;
-            let changed = false;
-            for (const i of unit) {
-              if (i === smalls[a] || i === smalls[b] || i === smalls[c]) continue;
-              for (const v of combo) changed = elim(i, v) || changed;
-            }
-            if (changed) {
-              fallback = { type: 'naked-triple', cell: smalls[a] };
-              continue outer;
-            }
-          }
-        }
-      }
-    }
-
-    // X-Wing
-    for (let d = 1; d <= 9; d++) {
-      const rowPairs = [];
-      for (let r = 0; r < 9; r++) {
-        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
-        if (cols.length === 2) rowPairs.push({ r, cols });
-      }
-      for (let a = 0; a < rowPairs.length - 1; a++) {
-        for (let b = a + 1; b < rowPairs.length; b++) {
-          const ra = rowPairs[a], rb = rowPairs[b];
-          if (ra.cols[0] !== rb.cols[0] || ra.cols[1] !== rb.cols[1]) continue;
-          let changed = false;
-          for (const col of ra.cols) {
-            for (const i of UNITS[9 + col]) {
-              if (cellRow(i) !== ra.r && cellRow(i) !== rb.r) changed = elim(i, d) || changed;
-            }
-          }
-          if (changed) {
-            fallback = { type: 'x-wing', cell: ra.r * 9 + ra.cols[0] };
-            continue outer;
-          }
-        }
-      }
-      const colPairs = [];
-      for (let c = 0; c < 9; c++) {
-        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
-        if (rows.length === 2) colPairs.push({ c, rows });
-      }
-      for (let a = 0; a < colPairs.length - 1; a++) {
-        for (let b = a + 1; b < colPairs.length; b++) {
-          const ca = colPairs[a], cb = colPairs[b];
-          if (ca.rows[0] !== cb.rows[0] || ca.rows[1] !== cb.rows[1]) continue;
-          let changed = false;
-          for (const row of ca.rows) {
-            for (const i of UNITS[row]) {
-              if (cellCol(i) !== ca.c && cellCol(i) !== cb.c) changed = elim(i, d) || changed;
-            }
-          }
-          if (changed) {
-            fallback = { type: 'x-wing', cell: ca.rows[0] * 9 + ca.c };
-            continue outer;
-          }
-        }
-      }
-    }
-
-    // Swordfish
-    for (let d = 1; d <= 9; d++) {
-      const rowLines = [];
-      for (let r = 0; r < 9; r++) {
-        const cols = UNITS[r].filter(i => cands[i]?.has(d)).map(cellCol);
-        if (cols.length >= 2 && cols.length <= 3) rowLines.push({ line: r, cross: cols });
-      }
-      let hit = trySwordfish(rowLines, false, d);
-      if (hit !== null) {
-        if (!fallback) fallback = { type: 'swordfish', cell: hit };
-        continue outer;
-      }
-
-      const colLines = [];
-      for (let c = 0; c < 9; c++) {
-        const rows = UNITS[9 + c].filter(i => cands[i]?.has(d)).map(cellRow);
-        if (rows.length >= 2 && rows.length <= 3) colLines.push({ line: c, cross: rows });
-      }
-      hit = trySwordfish(colLines, true, d);
-      if (hit !== null) {
-        if (!fallback) fallback = { type: 'swordfish', cell: hit };
-        continue outer;
-      }
-    }
-
-    // XY-Wing
-    for (let p = 0; p < 81; p++) {
-      if (!cands[p] || cands[p].size !== 2) continue;
-      const [x, y] = [...cands[p]];
-      const peerCells = PEERS[p].filter(i => cands[i]?.size === 2);
-      const w1cands = peerCells.filter(i => cands[i].has(x) && !cands[i].has(y));
-      const w2cands = peerCells.filter(i => cands[i].has(y) && !cands[i].has(x));
-
-      let progressed = false;
-      for (const w1 of w1cands) {
-        const z1 = [...cands[w1]].find(v => v !== x);
-        for (const w2 of w2cands) {
-          if (w2 === w1) continue;
-          const z2 = [...cands[w2]].find(v => v !== y);
-          if (z1 !== z2) continue;
-          const z = z1;
-          const targets = PEERS[w1].filter(i => i !== p && PEERS[w2].includes(i) && cands[i]?.has(z));
-          let changed = false;
-          for (const t of targets) changed = elim(t, z) || changed;
-          if (changed) {
-            if (!fallback) fallback = { type: 'xy-wing', cell: p };
-            progressed = true;
-            break;
-          }
-        }
-        if (progressed) break;
-      }
-      if (progressed) continue outer;
-    }
-
-    // Unique Rectangle Type 1
-    {
-      const urTarget = tryUniqueRectangle(cands, elim);
-      if (urTarget !== null) {
-        if (!fallback) fallback = { type: 'unique-rectangle', cell: urTarget };
-        continue outer;
-      }
-    }
-
-    break;
+  for (;;) {
+    const step = findStep(cands);
+    if (!step) return { type: 'stuck' };
+    steps.push(step);
+    if (step.placement) return { steps };
+    for (const { cell, digit } of step.eliminations) cands[cell].delete(digit);
   }
-
-  return fallback ?? { type: 'stuck' };
 }
 
 // Generate a puzzle matching the target difficulty grade. createPuzzle()

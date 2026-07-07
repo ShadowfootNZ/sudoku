@@ -236,8 +236,12 @@ const state = {
     const result = findHint(board, _s.solution);
     if (result.type === 'error') { emit('hinterror'); return; }
     if (result.type === 'stuck') return;
-    _s.hintCell      = result.cell;
-    _s.hintTechnique = result.type;
+    // Temporary adapter (hint-chains phase 2): findHint now returns the full
+    // technique chain; until phase 3/4 build the stepper, point at the final
+    // step's placement, same as the single-cell hint behaved before.
+    const lastStep = result.steps[result.steps.length - 1];
+    _s.hintCell      = lastStep.placement.cell;
+    _s.hintTechnique = lastStep.type;
     _s.hintsPointed++;
     state.selectCell(_s.hintCell);
     state.save();

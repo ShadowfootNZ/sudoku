@@ -14,7 +14,7 @@
   2. Drop the redundant copy in `countSolutions([...puzzle])` (~line 129) — `countSolutions` restores the board on every exit path; call it directly and document the restore invariant.
   3. Delete dead code in `generateGraded`: the `if (bestRank === targetRank) break;` (~line 759, unreachable for valid difficulties) and the post-loop ungraded fallback (~lines 762–764, unreachable since createPuzzle output always grades non-null). Normalize unknown difficulty strings to 'medium' once at the top instead.
   4. Collapse `GRADE_ORDER`/`GRADE_NAMES`/`CLUE_FLOOR` (+ the `?? 30` literal at ~line 120) into one `TIERS` table ({name, floor}, rank = index) so adding a tier can't half-succeed.
-  5. (Larger, optional) Unify the full 11-technique cascade shared by `gradePuzzle`/`findHint` into one parameterized technique table — removes ~170 duplicated lines and makes grader/hinter drift structurally impossible.
+  5. ~~(Larger, optional) Unify the full 11-technique cascade shared by `gradePuzzle`/`findHint` into one parameterized technique table~~ — **DONE 2026-07-07** as hint-chains phase 1 (see `.claude/hint-chains-plan.md`).
 
 ---
 
@@ -143,7 +143,8 @@
 ## Potential Issues to Watch
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v34`.
+- Service worker cache is currently `sudoku-v36`.
+- Hint pill technique name (2026-07-07, hint-chains phase 2): now shows the *final* step's technique in the chain rather than the earliest eliminating technique that fired. E.g. a hint reached via Pointing → Hidden Single now labels the pill "Hidden Single" instead of "Pointing". Intentional/temporary per the phase 2 adapter in `state.getHint()` — resolved properly by the phase 4 stepper, which will show every step.
 
 ---
 

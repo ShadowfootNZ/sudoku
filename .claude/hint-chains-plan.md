@@ -3,7 +3,30 @@
 Feature spec lives in todo.md ("Hint chains — show the full technique chain"). This doc is the
 phased execution plan. Phases are strictly sequential; each ends in a working, shippable state.
 
-**Status: not started.** Prerequisite (UR detector fix + de-dup) completed 2026-07-07.
+**Status: Phase 2 complete (2026-07-07).** Phase 1 also 2026-07-07; prerequisite (UR detector
+fix + de-dup) also 2026-07-07.
+
+Phase 1 results: 11 detectors extracted (`findNakedSingle` … `findUniqueRectangle`), consumed
+via `DETECTORS`/`TECH_RANK`/`findStep`; `gradePuzzle` and `findHint` are now ~20-line drivers.
+Every detector already reports `cell`, `patternCells`, and exact `eliminations`/`placement`
+(hidden single also carries its `unit`) — Phase 2 only needs to record steps in the findHint
+driver. Equivalence verified: 101 grade + 5,220 findHint pre/post comparisons across 100
+generated puzzles and full simulated solves, 0 mismatches; perf unchanged (veryhard avg
+~143ms vs ~146ms, hit rate within noise); UR step-contract unit checks 8/8.
+
+Phase 2 results: `findHint(board, solution)` now returns `{ steps: [...] }` — the ordered
+chain of every technique applied from the current board to the placement — replacing the old
+`{ type, cell }` fallback-tracking return. The `FALLBACK_OVERWRITERS` quirk from phase 1 is
+gone; the chain makes it unnecessary. `state.getHint()` carries a temporary adapter (marked
+in a comment) that reads `hintCell`/`hintTechnique` off the chain's last step, so the app
+plays unchanged with the old single-cell pill until phases 3–4 build the real stepper — note
+the pill's shown technique now reflects the *final* step, not the earliest overwriting
+technique as it briefly did pre-phase-2. Verified: 80 full simulated solves (20/tier), 4,166
+chains, 22,072 assertions — chains non-empty and end in `placement`; every non-final step
+carries eliminations; every `patternCells` non-empty; every elimination provably sound
+(`solution[cell] !== digit`, so a hint never removes the correct answer); every step
+independently reproducible by replaying prior eliminations into a fresh `findStep` call. 0
+errors, 0 stuck across all 80 solves.
 
 ---
 
