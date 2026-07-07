@@ -51,6 +51,23 @@ const UNITS = (() => {
   return us;
 })();
 
+// countSolutions()/solve() only validate digits placed into empty cells during
+// backtracking, so a puzzle whose *givens* already conflict (e.g. two 5s in a
+// row) would otherwise sail through as "uniquely solvable". Custom puzzle entry
+// must run this first.
+export function hasConflictingGivens(board) {
+  return UNITS.some(unit => {
+    const seen = new Set();
+    for (const i of unit) {
+      const v = board[i];
+      if (v === EMPTY) continue;
+      if (seen.has(v)) return true;
+      seen.add(v);
+    }
+    return false;
+  });
+}
+
 const cellRow = i => Math.floor(i / 9);
 const cellCol = i => i % 9;
 const cellBox = i => Math.floor(Math.floor(i / 9) / 3) * 3 + Math.floor((i % 9) / 3);

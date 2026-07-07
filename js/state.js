@@ -196,6 +196,8 @@ const state = {
     emit('statechange', { cell });
   },
 
+  // Intentionally no pushHistory() — see the comment above undo(). Notes are
+  // not covered by undo/redo.
   toggleNote(cell, digit) {
     if (_s.given[cell] || _s.answer[cell]) return;
     const notes = _s.notes[cell];
@@ -209,6 +211,7 @@ const state = {
     emit('statechange', { cell });
   },
 
+  // Intentionally no pushHistory() — see the comment above undo().
   fillCandidates(cell) {
     if (_s.given[cell] || _s.answer[cell]) return;
     _s.notes[cell] = validCandidates(cell);
@@ -217,6 +220,7 @@ const state = {
     emit('statechange', { cell });
   },
 
+  // Intentionally no pushHistory() — see the comment above undo().
   fillAllCandidates() {
     for (let i = 0; i < 81; i++) {
       if (!_s.given[i] && !_s.answer[i]) {
@@ -228,6 +232,9 @@ const state = {
     emit('statechange', { all: true });
   },
 
+  // Undo/redo only cover answer placements (setValue/clearCell push history).
+  // toggleNote/fillCandidates/fillAllCandidates deliberately don't push
+  // history: notes are scratch work, not moves to step back through.
   undo() {
     if (!_s.history.length) return;
     _s.redoStack.push(snapshot());

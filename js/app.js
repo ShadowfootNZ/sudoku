@@ -9,7 +9,7 @@ import {
   showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, hideOverlay,
 } from './ui.js';
 import { initInput, setInputHandlers } from './input.js';
-import { generateGraded, countSolutions, solve } from './generator.js';
+import { generateGraded, countSolutions, solve, hasConflictingGivens } from './generator.js';
 
 let inEntryMode = false;
 let entryGrid   = new Array(81).fill(0);
@@ -270,6 +270,10 @@ function init() {
 
     if (puzzle.every(v => v !== 0)) {
       showEntryError('This puzzle is already complete — leave some cells empty.');
+      return;
+    }
+    if (hasConflictingGivens(puzzle)) {
+      showEntryError('Conflicting digits — check rows, columns, and boxes.');
       return;
     }
     const count = countSolutions([...puzzle]);

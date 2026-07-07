@@ -18,6 +18,14 @@
 
 ---
 
+## Code Review Follow-ups (2026-07-07)
+
+- [ ] **Harden solver helpers against conflicting givens** — custom puzzle entry now calls `hasConflictingGivens(puzzle)` before `countSolutions()`/`solve()`, so the current UI path is guarded. The exported helpers themselves still accept invalid pre-filled boards if a future caller bypasses that guard: `countSolutions()` can return `1` and `solve()` can return an invalid solved board for a puzzle whose givens already conflict. Make `countSolutions()` return `0` and `solve()` return `null` when `hasConflictingGivens(board)` is true, then add regression coverage for both direct helper calls and custom-entry validation.
+- [ ] **Delete dead `js/worker.js`** — never wired up, and now stale: it calls `createPuzzle()` directly instead of `generateGraded()`, so it wouldn't preserve difficulty grading even if hooked in. Puzzle generation still runs on the main thread via a double `requestAnimationFrame()` in `startNewGame()` ([app.js](../js/app.js) ~line 60). Revisit off-thread generation later if generation time becomes a real problem (worth re-measuring after the puzzle-catalogue feature above lands, since that may replace live generation entirely) — don't just resurrect this file as-is.
+- [ ] **Service worker fetch handler should enforce same-origin** — [sw.js:47-52](../sw.js#L47-L52) comments "Only handle GET requests for our own origin" but never checks `new URL(e.request.url).origin === location.origin`; it cache-first-wraps every GET it sees. Low impact today since assets are all local, but the app is hosted online for others to use, so any future third-party request (fonts, images, analytics, etc.) would silently get pulled into the SW's caching behavior. Add the origin check to match the existing comment.
+
+---
+
 ## Requested Features (implement when asked)
 
 - [ ] **Build a puzzle catalogue** — write a Node.js script that generates and grades puzzles offline using a human-strategy simulator (technique cascade already in `findHint()`). Output a `puzzles.json` file with pools of ~50–100 puzzles per difficulty level, each entry containing `givens` and `solution` arrays. Grading ensures each difficulty genuinely requires the expected techniques (e.g. Very Hard requires X-Wing or harder). Run the script locally and commit the output; redeploy to update the pool.

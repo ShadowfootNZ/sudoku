@@ -159,6 +159,10 @@ export function initInput() {
   // ── Global keyboard (desktop convenience) ──────────────────────────────
   document.addEventListener('keydown', e => {
     if (document.activeElement === scribble) return;
+    // Modal dialogs (resume/settings/clear/help/complete) sit on top of the
+    // grid but don't own keyboard focus, so digit/undo/redo shortcuts would
+    // otherwise reach through and mutate the puzzle behind them.
+    if (!document.getElementById('overlay').classList.contains('hidden')) return;
     const d = parseInt(e.key, 10);
     if (d >= 1 && d <= 9) {
       applyDigit(d);
