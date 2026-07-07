@@ -9,54 +9,6 @@
 
 ## Bug Fixes — Planned (from 2026-07-06 code review of the generator rewrite)
 
-- [ ] **Fix Unique Rectangle detector: two correctness bugs + de-duplicate the detector** (`js/generator.js`)
-
-  Both bugs make the detector *miss* valid patterns (it never makes a wrong elimination, so no generated puzzle is invalid). Effect when a missed pattern is the only next step: `gradePuzzle()` returns null → `createPuzzle()` rejects a good removal (shrinks the reachable veryhard space); `findHint()` returns `{ type: 'stuck' }` on a solvable position.
-
-  **Bug 1 — vertical rectangles never detected** (`gradePuzzle` ~line 403, `findHint` ~line 713)
-  The guard `if (cellBox(i11) === cellBox(i12)) continue;` rejects any rectangle whose two columns share a stack — but "columns in same stack, rows in different bands" is one of the two legal UR orientations (verified: corners 0, 1, 27, 28 span exactly boxes 0 and 3 and are skipped). The follow-up guard then *requires* rows in the same band, so only horizontal URs ever match.
-
-  *Fix:* a rectangle is UR-legal iff its four corners span exactly two boxes, which is `sameBand(r1,r2) XOR sameStack(c1,c2)`:
-
-  ```js
-  const sameBand  = (r1 / 3 | 0) === (r2 / 3 | 0);
-  const sameStack = (c1 / 3 | 0) === (c2 / 3 | 0);
-  if (sameBand === sameStack) continue; // 1 box (both true) or 4 boxes (both false)
-  ```
-
-  Replaces both existing `cellBox` guards. Optional efficiency bonus (review finding 9): encode the constraint in the loop bounds instead — enumerate rows-same-band × cols-different-stacks (243 combos) plus rows-different-bands × cols-same-stack (243) rather than filtering all 1296.
-
-  **Bug 2 — fourth corner required to hold BOTH pair digits** (`gradePuzzle` ~line 412, `findHint` ~line 722)
-  `if (!cands[target].has(A) || !cands[target].has(B) || cands[target].size <= 2) continue;` skips when the target holds only one of A/B — but the uniqueness argument still applies: if target held A, the other three corners would be forced into the deadly A,B/B,A rectangle, contradicting solution uniqueness. So whichever of A/B *is* present is eliminable, even if the other is absent.
-
-  *Fix:* replace the guard + fixed double-elim with:
-
-  ```js
-  if (!cands[target]) continue;
-  const present = [A, B].filter(d => cands[target].has(d));
-  if (present.length === 0 || cands[target].size === present.length) continue; // nothing to do / would empty the cell
-  let changed = false;
-  for (const d of present) changed = elim(target, d) || changed;
-  ```
-
-  The `size === present.length` check subsumes the old `size <= 2` guard (which the review flagged as dead anyway): it prevents eliminating every candidate from the target (degenerate states that can't arise on a valid unique puzzle, but keep the grader's stuck→null path as the failure mode rather than an empty candidate set).
-
-  **De-duplication (do this FIRST, then fix once)**
-  The UR block is duplicated verbatim in `gradePuzzle` and `findHint` — fixing in place means four coordinated edits. Instead extract one module-level helper, mirroring the shape of `trySwordfish`:
-
-  ```js
-  // returns the target cell index if a UR elimination was applied, else null
-  const tryUniqueRectangle = (cands, elim) => { ...single copy of the loops... };
-  ```
-
-  `gradePuzzle` uses it as: `if (tryUniqueRectangle(cands, elim) !== null) { hardest = Math.max(hardest, G.veryhard); continue outer; }`; `findHint` uses the returned cell for the `{ type: 'unique-rectangle', cell }` fallback. (Same refactor is available for the Swordfish and XY-Wing blocks — review finding 3 — but is optional for this fix.)
-
-  **Verification plan**
-  1. Synthetic unit checks (node, scratchpad): build candidate grids containing (a) a vertical UR (e.g. corners 0/1/27/28 as {A,B} bivalues, target with extras) and (b) a one-digit UR (target holds A + extras, no B); assert the helper fires and eliminates the right digit(s).
-  2. Regression benchmark (same harness as before): 20+ runs per tier — expect veryhard hit-rate ≥ the current ~70% (more URs detected ⇒ grade-null rejections drop), timing in the same ~60–300ms band, 0 invalid puzzles (uniqueness + clue/solution consistency).
-  3. Simulated full solves with `findHint` on generated veryhard puzzles: 0 `error` results, and confirm `unique-rectangle` now appears in the technique counts (it fired 0 times pre-fix).
-  4. `node --check js/generator.js`, bump SW cache `sudoku-v30` → `v31`, update plan.md/todo.md.
-
 - [ ] **Generator cleanup follow-ups (non-bugs, same review)** — in priority order:
   1. Early-abort grading: pass `targetRank` into `gradePuzzle()` and return as soon as `hardest > targetRank`; have `createPuzzle()` return its final grade so `generateGraded()` (~line 755) doesn't re-grade the same board.
   2. Drop the redundant copy in `countSolutions([...puzzle])` (~line 129) — `countSolutions` restores the board on every exit path; call it directly and document the restore invariant.
@@ -72,7 +24,7 @@
 
 - [ ] **Use the puzzle catalogue** — replace the live generator in `startNewGame()` with a random pick from the appropriate difficulty pool in `puzzles.json`. Fetch the file once on startup (or lazily on first new game) and cache it. Fall back to the current live generator if the fetch fails. Add `puzzles.json` to the SW cache assets list and the deploy workflow allowlist.
 
-- [ ] **Hint chains — show the full technique chain, not just the final cell** (big feature; `js/generator.js`, `js/state.js`, `js/ui.js`, `css/style.css`)
+- [ ] **Hint chains — show the full technique chain, not just the final cell** (big feature; `js/generator.js`, `js/state.js`, `js/ui.js`, `css/style.css`) — **phased implementation plan: `.claude/hint-chains-plan.md`** (created 2026-07-07)
 
   **Problem.** `findHint()` runs the technique cascade on a temp candidate grid: elimination techniques (pointing, pairs, X-Wing, …) apply their eliminations silently and the cascade restarts; the hint returned to the player is usually just the *final* single that opens up (e.g. "Hidden Single") with one highlighted cell. The chain of techniques that made that single possible — and the cells that form each pattern (the two hidden-pair cells, the four X-Wing corners) — is invisible. The player sees "Hidden Single" on a cell that is not deducible by a hidden single from the visible board state.
 
@@ -191,8 +143,7 @@
 ## Potential Issues to Watch
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v28`.
-- Hint technique pill not appearing on iPad Safari — needs on-device debugging.
+- Service worker cache is currently `sudoku-v34`.
 
 ---
 
@@ -232,3 +183,5 @@
 - [x] Hint technique pill — floating `position:fixed` pill above controls shows technique name (Naked Single, Hidden Single, etc.) when hint is used and setting is on; dismissible with ×; auto-clears when hint cell is filled; `hintTechnique` tracked in state and undo snapshots
 - [x] Settings defaults updated — highlightPeers: false, highlightLegal: false, showStrategyOnHint: false
 - [x] Technique-based difficulty grading — `gradePuzzle()`/`findHint()` now detect Swordfish, XY-Wing, and Unique Rectangle (Type 1) in addition to the existing cascade (Naked/Hidden Single, Pointing/Box-Line, Naked/Hidden Pair, Naked Triple, X-Wing), all folded into the "veryhard" tier. `createPuzzle()` digs cells directly toward the target grade (rejecting any removal that overshoots it) instead of digging to a fixed clue count and hoping; `generateGraded()` retries up to 12x with a fresh solution and falls back to the closest grade below target if the exact tier isn't reached. Fixed a real bug in the process: requesting "Very Hard" previously always exhausted 50 blind retries (~400-800ms) and silently served a Medium-graded puzzle almost every time. An Expert 5th tier was briefly added and then merged back into "veryhard" — its techniques kicked in too close to veryhard's to reliably land on either individually (~10-15% hit rate); merging raised the hit rate to ~70%+ at the same ~60-300ms generation speed.
+- [x] Custom puzzle builder — enter a puzzle from an external source, validate it has a unique solution, then solve it in this app. Entry point: "Custom…" option in difficulty dropdown. Entry mode where tapping cells cycles digits 1–9 (or uses numpad). Validation reuses `countSolutions()` and rejects puzzles with 0 or 2+ solutions. Confirmed working end-to-end (2026-07-07).
+- [x] Unique Rectangle detector fixed + de-duplicated (2026-07-07, from the 2026-07-06 review) — extracted the duplicated UR block from `gradePuzzle`/`findHint` into one module-level `tryUniqueRectangle(cands, elim)` helper and fixed three misses: (1) vertical rectangles (columns in same stack, rows in different bands) were never detected — replaced the `cellBox` guards with the `sameBand XOR sameStack` two-box test; (2) the fourth corner was required to hold BOTH pair digits — now whichever of A/B is present is eliminated (uniqueness argument covers each digit independently), guarded so the cell is never emptied; (3) found during testing, beyond the review: a bivalue target with a *different* pair (e.g. {1,9} vs pair {1,2}) was counted as a fourth bivalue corner and rejected — restructured to try each corner as target, requiring the other three to share the pair. Verified: 10/10 synthetic unit checks; head-to-head 40-run benchmark: veryhard hit rate 63%→83%, UR firings 16→77, avg gen time 223ms→175ms, 0 invalid puzzles; 25 simulated hint-driven veryhard solves with 0 errors/stuck. SW cache bumped v33→v34.

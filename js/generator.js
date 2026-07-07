@@ -160,6 +160,49 @@ export function createPuzzle(solution, difficulty) {
   return puzzle;
 }
 
+// Unique Rectangle Type 1 helper, shared by gradePuzzle and findHint.
+// Three corners of a rectangle spanning exactly two boxes hold the same
+// bivalue pair {A,B}; if the fourth corner also resolved to A or B, the four
+// corners would form a deadly pattern with two interchangeable solutions,
+// contradicting uniqueness — so whichever of A/B the fourth corner holds can
+// be eliminated. Returns the target cell index if an elimination was applied,
+// else null.
+const tryUniqueRectangle = (cands, elim) => {
+  for (let r1 = 0; r1 < 9; r1++) {
+    for (let r2 = r1 + 1; r2 < 9; r2++) {
+      const sameBand = Math.floor(r1 / 3) === Math.floor(r2 / 3);
+      for (let c1 = 0; c1 < 9; c1++) {
+        for (let c2 = c1 + 1; c2 < 9; c2++) {
+          // UR-legal iff the corners span exactly 2 boxes: rows in the same
+          // band XOR columns in the same stack (both → 1 box, neither → 4)
+          const sameStack = Math.floor(c1 / 3) === Math.floor(c2 / 3);
+          if (sameBand === sameStack) continue;
+          const corners = [r1 * 9 + c1, r1 * 9 + c2, r2 * 9 + c1, r2 * 9 + c2];
+          if (corners.some(i => !cands[i])) continue; // all four must be unsolved
+          // Try each corner as the target; the other three must share the
+          // same bivalue pair (the target itself may hold any candidates,
+          // including a different bivalue pair)
+          for (const target of corners) {
+            const floor = corners.filter(i => i !== target);
+            if (floor.some(i => cands[i].size !== 2)) continue;
+            const [A, B] = [...cands[floor[0]]];
+            if (floor.some(i => !cands[i].has(A) || !cands[i].has(B))) continue;
+            // The uniqueness argument covers each pair digit independently,
+            // so eliminate whichever of A/B is present — but keep at least
+            // one other candidate so the cell isn't emptied
+            const present = [A, B].filter(d => cands[target].has(d));
+            if (present.length === 0 || cands[target].size === present.length) continue;
+            let changed = false;
+            for (const d of present) changed = elim(target, d) || changed;
+            if (changed) return target;
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
 // Technique-based grader.
 // Applies human solving techniques in difficulty order; returns the grade of the
 // hardest technique needed, or null if the grader gets stuck (puzzle needs guessing).
@@ -411,32 +454,8 @@ function gradePuzzle(puzzle) {
       if (progressed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
     }
 
-    // Unique Rectangle Type 1 (Very Hard): 3 corners of a 2-box rectangle share
-    // the same 2 candidates; the 4th corner cannot also be that pair (it would
-    // create a second solution), so those 2 candidates can be eliminated there
-    for (let r1 = 0; r1 < 9; r1++) {
-      for (let r2 = r1 + 1; r2 < 9; r2++) {
-        for (let c1 = 0; c1 < 9; c1++) {
-          for (let c2 = c1 + 1; c2 < 9; c2++) {
-            const i11 = r1 * 9 + c1, i12 = r1 * 9 + c2, i21 = r2 * 9 + c1, i22 = r2 * 9 + c2;
-            if (cellBox(i11) === cellBox(i12)) continue;
-            if (cellBox(i11) !== cellBox(i21) || cellBox(i12) !== cellBox(i22)) continue;
-            const corners = [i11, i12, i21, i22];
-            const bivals = corners.filter(i => cands[i]?.size === 2);
-            if (bivals.length !== 3) continue;
-            const pairKeys = new Set(bivals.map(i => [...cands[i]].sort((a, b) => a - b).join(',')));
-            if (pairKeys.size !== 1) continue;
-            const [A, B] = [...pairKeys][0].split(',').map(Number);
-            const target = corners.find(i => !bivals.includes(i));
-            if (!cands[target] || !cands[target].has(A) || !cands[target].has(B) || cands[target].size <= 2) continue;
-            let changed = false;
-            changed = elim(target, A) || changed;
-            changed = elim(target, B) || changed;
-            if (changed) { hardest = Math.max(hardest, G.veryhard); continue outer; }
-          }
-        }
-      }
-    }
+    // Unique Rectangle Type 1 (Very Hard)
+    if (tryUniqueRectangle(cands, elim) !== null) { hardest = Math.max(hardest, G.veryhard); continue outer; }
 
     break; // No technique made progress — grader is stuck
   }
@@ -724,30 +743,11 @@ export function findHint(board, solution) {
     }
 
     // Unique Rectangle Type 1
-    for (let r1 = 0; r1 < 9; r1++) {
-      for (let r2 = r1 + 1; r2 < 9; r2++) {
-        for (let c1 = 0; c1 < 9; c1++) {
-          for (let c2 = c1 + 1; c2 < 9; c2++) {
-            const i11 = r1 * 9 + c1, i12 = r1 * 9 + c2, i21 = r2 * 9 + c1, i22 = r2 * 9 + c2;
-            if (cellBox(i11) === cellBox(i12)) continue;
-            if (cellBox(i11) !== cellBox(i21) || cellBox(i12) !== cellBox(i22)) continue;
-            const corners = [i11, i12, i21, i22];
-            const bivals = corners.filter(i => cands[i]?.size === 2);
-            if (bivals.length !== 3) continue;
-            const pairKeys = new Set(bivals.map(i => [...cands[i]].sort((a, b) => a - b).join(',')));
-            if (pairKeys.size !== 1) continue;
-            const [A, B] = [...pairKeys][0].split(',').map(Number);
-            const target = corners.find(i => !bivals.includes(i));
-            if (!cands[target] || !cands[target].has(A) || !cands[target].has(B) || cands[target].size <= 2) continue;
-            let changed = false;
-            changed = elim(target, A) || changed;
-            changed = elim(target, B) || changed;
-            if (changed) {
-              if (!fallback) fallback = { type: 'unique-rectangle', cell: target };
-              continue outer;
-            }
-          }
-        }
+    {
+      const urTarget = tryUniqueRectangle(cands, elim);
+      if (urTarget !== null) {
+        if (!fallback) fallback = { type: 'unique-rectangle', cell: urTarget };
+        continue outer;
       }
     }
 

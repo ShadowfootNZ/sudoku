@@ -15,7 +15,7 @@ A Sudoku game playable in Safari on iPad with Apple Pencil support. Hosted as a 
 sudoku/
 ├── index.html          # App shell, viewport meta, PWA meta tags
 ├── manifest.json       # PWA: standalone, portrait, icons
-├── sw.js               # Cache-first service worker (currently v23)
+├── sw.js               # Cache-first service worker (currently v34)
 ├── icons/
 │   ├── icon-192.png          # Original sudoku PWA icon (kept for SW cache)
 │   ├── icon-512.png          # Original sudoku PWA icon; used as apple-touch-icon
@@ -57,6 +57,8 @@ Difficulty is technique-graded, not just clue-count. `gradePuzzle()` solves a pu
 `countSolutions()` uses MRV (Minimum Remaining Values) heuristic, stops at 2 — fast uniqueness check.
 
 **History:** "Very Hard" and "Expert" briefly existed as separate tiers, but Expert's techniques (Swordfish/XY-Wing/Unique Rectangle) kick in so close to Veryhard's (Hidden Pair/Naked Triple/X-Wing) that grids needing more than X-Wing almost always needed Expert-tier techniques too — Veryhard hit its exact target only ~10-15% of the time. Merging them into one wider "veryhard" band raised the hit rate to ~70%+ with the same generation speed. Typical generation time ~60-300ms for hard/veryhard, ~10-20ms for easy/medium.
+
+**Unique Rectangle (2026-07-07 fix):** the UR Type 1 detector lives in one module-level helper `tryUniqueRectangle(cands, elim)` shared by `gradePuzzle` and `findHint` (previously duplicated inline in both). Three detection misses were fixed: vertical rectangles were never matched (guard now `sameBand XOR sameStack` — corners must span exactly two boxes); the target corner needed BOTH pair digits (now whichever of A/B is present is eliminated, since the uniqueness argument covers each independently); and a bivalue target with a different pair was miscounted as a fourth floor corner (helper now tries each corner as target, requiring the other three to share the pair). Result: veryhard hit rate ~63%→~83%, UR firings ~5x more frequent, generation slightly faster.
 
 ### State Schema (localStorage key: `sudoku-save`)
 ```json
@@ -187,7 +189,7 @@ Changing defaults in `settings.js` only affects fresh installs (no prior `sudoku
 - Help dialog: `max-width: min(80vw, 800px)`; `#help-content` has `overflow-y: auto; flex: 1; min-height: 0` so title and Got It button stay fixed while content scrolls.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v29`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v34`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - **Update flow**: install handler does NOT call `skipWaiting()`. New SW installs, then waits. App detects `reg.waiting` (or `updatefound` → `statechange === 'installed'`) and shows "Update available" row in Settings → App group. User taps "Update" → `postMessage('SKIP_WAITING')` → SW activates → `controllerchange` → `location.reload()`. Settings (localStorage) survive the reload.
 - `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
