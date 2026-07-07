@@ -88,6 +88,22 @@ export function renderCell(i) {
   }
 }
 
+export function renderEntryAll(entryGrid) {
+  for (let i = 0; i < 81; i++) {
+    const el = cells[i];
+    if (!el) continue;
+    const digit = entryGrid[i];
+    const cls = ['cell'];
+    if (digit) {
+      cls.push('given');
+      if (state.PEERS[i].some(p => entryGrid[p] === digit)) cls.push('conflict');
+    }
+    if (i === state.raw.selected) cls.push('selected');
+    el.className = cls.join(' ');
+    el.innerHTML = digit ? `<span class="digit">${digit}</span>` : '';
+  }
+}
+
 export function renderPeersOf(cell) {
   renderCell(cell);
   state.PEERS[cell].forEach(p => renderCell(p));
@@ -243,4 +259,8 @@ export function showSettings() {
 
 export function showHelp() {
   showOverlay('help-dialog');
+}
+
+export function showClearDialog() {
+  showOverlay('clear-dialog');
 }

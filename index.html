@@ -36,6 +36,7 @@
         <option value="medium" selected>Medium</option>
         <option value="hard">Hard</option>
         <option value="veryhard">Very Hard</option>
+        <option value="custom">Custom…</option>
       </select>
       <button id="new-game-btn">New Game</button>
       <button id="help-btn" aria-label="Help">?</button>
@@ -71,6 +72,14 @@
       <button id="fill-btn"     class="mode-btn" title="Fill candidates">✍️ Fill</button>
       <button id="hint-btn"     class="mode-btn" title="Hint">🔍 Hint</button>
       <button id="settings-btn" class="mode-btn" title="Settings">⚙️ Settings</button>
+    </div>
+    <div id="entry-controls" hidden>
+      <p id="entry-instructions">Enter the puzzle's given digits, then tap Confirm.</p>
+      <div id="entry-btns">
+        <button id="entry-cancel-btn" class="mode-btn">Cancel</button>
+        <button id="entry-confirm-btn" class="mode-btn entry-confirm">✓ Confirm</button>
+      </div>
+      <p id="entry-error" hidden></p>
     </div>
   </div>
 
@@ -159,9 +168,18 @@
         </div>
       </div>
       <div class="dialog-btns">
+        <button id="settings-reset-btn" class="btn-secondary">Reset to defaults</button>
         <button id="settings-close-btn">Done</button>
       </div>
     </div>
+  <div id="clear-dialog" class="dialog hidden">
+    <h2>Clear all?</h2>
+    <p>All answers and notes will be cleared.</p>
+    <div class="dialog-btns">
+      <button id="clear-cancel-btn" class="btn-secondary">Cancel</button>
+      <button id="clear-confirm-btn">🧹 Clear all</button>
+    </div>
+  </div>
   <div id="help-dialog" class="dialog hidden">
     <h2>How to Play</h2>
     <div id="help-content">

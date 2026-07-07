@@ -7,6 +7,12 @@ let penTimer           = null;
 let touchDebounceTimer = null;
 let scribbleCell       = -1; // cell index currently under the scribble input
 
+let _handlers = null; // set by app.js in entry mode to redirect digit/delete input
+
+export function setInputHandlers(handlers) {
+  _handlers = handlers;
+}
+
 // Position the hidden Scribble input over a grid cell so iPadOS Scribble
 // activates at the right place on screen, then focus it.
 function focusScribble(cellEl) {
@@ -30,12 +36,18 @@ function handleCellSelect(e) {
 }
 
 function applyDigit(digit) {
+  if (_handlers) { _handlers.digit(digit); return; }
   if (state.selected === -1) return;
   if (state.notesMode) {
     state.toggleNote(state.selected, digit);
   } else {
     state.setValue(state.selected, digit);
   }
+}
+
+function applyDelete() {
+  if (_handlers) { _handlers.delete(); return; }
+  if (state.selected !== -1) state.clearCell(state.selected);
 }
 
 export function initInput() {
@@ -119,7 +131,7 @@ export function initInput() {
       // Non-digit gesture (unrecognized cross-out, slash, etc.) → erase the cell.
       // Note: cross-out strokes are often misread as "1" by Scribble OCR — for reliable
       // deletion use the iPadOS scratch-out gesture (rapid zigzag), which sends Backspace.
-      if (state.selected !== -1) state.clearCell(state.selected);
+      applyDelete();
     } else {
       const d = parseInt(digits[digits.length - 1], 10);
       if (d >= 1 && d <= 9) applyDigit(d);
@@ -137,7 +149,7 @@ export function initInput() {
 
     if (e.key === 'Backspace' || e.key === 'Delete') {
       e.preventDefault();
-      if (state.selected !== -1) state.clearCell(state.selected);
+      applyDelete();
     } else if (e.key === 'ArrowLeft'  && state.selected > 0)  state.selectCell(state.selected - 1);
     else if (e.key === 'ArrowRight' && state.selected < 80) state.selectCell(state.selected + 1);
     else if (e.key === 'ArrowUp'    && state.selected >= 9)  state.selectCell(state.selected - 9);
@@ -151,7 +163,7 @@ export function initInput() {
     if (d >= 1 && d <= 9) {
       applyDigit(d);
     } else if (e.key === 'Backspace' || e.key === 'Delete') {
-      if (state.selected !== -1) state.clearCell(state.selected);
+      applyDelete();
     } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       state.undo();

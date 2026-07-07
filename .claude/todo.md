@@ -9,11 +9,17 @@
 
 ## Requested Features (implement when asked)
 
+- [ ] **Build a puzzle catalogue** — write a Node.js script that generates and grades puzzles offline using a human-strategy simulator (technique cascade already in `findHint()`). Output a `puzzles.json` file with pools of ~50–100 puzzles per difficulty level, each entry containing `givens` and `solution` arrays. Grading ensures each difficulty genuinely requires the expected techniques (e.g. Very Hard requires X-Wing or harder). Run the script locally and commit the output; redeploy to update the pool.
+
+- [ ] **Use the puzzle catalogue** — replace the live generator in `startNewGame()` with a random pick from the appropriate difficulty pool in `puzzles.json`. Fetch the file once on startup (or lazily on first new game) and cache it. Fall back to the current live generator if the fetch fails. Add `puzzles.json` to the SW cache assets list and the deploy workflow allowlist.
+
 - [ ] **Investigate Dancing Links (DLX) for puzzle generation** — Donald Knuth's Algorithm X implemented with Dancing Links is the standard fast approach for exact cover problems, which Sudoku generation/solving maps onto naturally. Current backtracking solver works but DLX may offer faster generation (especially for hard/veryhard) and cleaner architecture. Worth evaluating if generation speed becomes an issue or when tackling technique-based grading.
 
 - [ ] **Fix gold completion animation when hints were used** — the gold flash reward animation plays even when the player used hints or peeks. Consider suppressing or replacing the animation (e.g. no animation, or a muted colour) when `hintsPointed > 0` or `hintsUsed > 0`.
 
-- [ ] **Clear settings** — add a way to reset all settings to defaults. Could be a "Reset to defaults" button in the Settings dialog, or clearing the `sudoku-settings` localStorage key. Needed because changing code defaults doesn't affect existing users with saved settings.
+- [x] **Clear settings** — "Reset to defaults" button in Settings dialog; calls `settings.reset()` which restores DEFAULTS and removes `sudoku-settings` from localStorage.
+
+- [ ] **Check for app updates** — let the player check for and download the latest version instead of waiting for the SW to update silently. Register a `sw.controllerchange`/`updatefound` listener and expose a manual "Check for updates" action (e.g. in Settings) that calls `registration.update()`. If a new SW is waiting, show a prompt ("Update available — reload to apply") that calls `skipWaiting()`/`postMessage` then reloads. Useful since the app has no auto-reload today — users on stale cached versions (e.g. old SW cache number) have no way to notice or force-refresh.
 
 - [ ] **Enhanced selection highlighting**  
   When a digit is selected, augment the existing row/column/box peer highlighting with:
@@ -21,11 +27,29 @@
   - **Legal entry cells**: indicate empty cells where the selected digit is a valid placement
   - **Notes**: bold the matching candidate number within a note cell (no visual change if that candidate isn't present). A cell could therefore show both a "legal entry" indicator and a bolded note simultaneously.
 
-- [ ] **Custom puzzle builder**  
-  Let the user enter a puzzle copied from an external source (newspaper, app, website) and solve it in this app. Entry point: a "Custom…" option at the bottom of the difficulty dropdown. UI: a grid entry mode where tapping cells cycles through digits 1–9 (or uses the numpad/pencil), distinct from normal play. On confirm, validate the puzzle:
-  - Has exactly one solution (reuse `countSolutions()`)
-  - Is not already solved
-  If invalid, show an error explaining why. On success, start a normal game with those givens (no difficulty label, or label as "Custom").
+- [x] **Custom puzzle builder** — "Custom…" option in difficulty dropdown triggers entry mode. Numpad + Scribble set digits; conflicts highlighted in real time. Confirm validates unique solution (`countSolutions`), then calls `solve()` for the solution and starts a normal game with `difficulty: 'custom'`. Cancel restores the previous game. Error messages shown inline.
+
+- [ ] **Multi-step hint for chained techniques** — when the hint technique is an elimination type (anything other than naked-single / hidden-single), split the hint into two stages. Only applies when "Show technique on hint" is ON (player has opted into technique info).
+  - **Stage 1 (first press):** pill shows technique name; pattern cells highlighted in amber (e.g. the 2 naked-pair cells, 4 X-wing cells). Target cell not yet revealed.
+  - **Stage 2 (second press):** amber cells stay; target cell highlighted in gold as usual. Peek now available to reveal the digit.
+  - If "Show technique on hint" is OFF, skip stage 1 and go straight to stage 2 (existing behaviour).
+  - Requires `findHint` to return `patternCells[]` alongside `type` and `cell`; new `hintStage` (1 or 2) in state; new `hint-pattern` CSS tint class (amber). `elimCells[]` optional — can add later for direction-1 style enhancement.
+
+- [ ] **Save / load games** — let a player save a snapshot of a game to return to later; most valuable for custom puzzles and hard positions. Saves stored in localStorage under a new key (e.g. `sudoku-saves`) as a JSON array of full state snapshots, each with a timestamp and label (auto-label: difficulty + date, e.g. "Custom · 26 Jun"). A reasonable cap (e.g. 5 slots) avoids unbounded storage growth; when full, offer to overwrite the oldest. Surfaced as a "Save" button (possibly in Settings or mode-controls) and a "Saved games" list in a dialog. Loading replaces the current game with a confirmation if unsaved progress would be lost. The existing `sudoku-save` resume slot stays separate — saves are explicit snapshots, the resume slot is the auto-save.
+
+- [ ] **Reset puzzle** — clear all player-entered digits and notes, restoring the puzzle to its initial given state. Particularly useful for custom puzzles. UX: reuse the 🗑️ delete button — if tapped when the selected cell is empty (or nothing selected), the button label changes to "Clear all?" (armed state); a second tap triggers the reset. Any other action (cell selection, numpad tap, mode button) silently disarms it. Calls a new `state.resetPuzzle()` that restores `answer` and `notes` to their post-`newGame` state, clears undo/redo history, and emits a full `statechange`.
+
+- [ ] **Technique explanations in Help** — add a "Techniques" section to the help dialog explaining each solving technique the hint system can name. Keep language simple and visual (describe what to look for on the board, not abstract logic). Techniques to cover, in order of difficulty:
+  | Technique | One-line explanation |
+  |---|---|
+  | Naked Single | Only one digit can go in this cell |
+  | Hidden Single | This digit can only go in one cell in this row/column/box |
+  | Pointing Pair/Triple | A digit is locked to one row or column within a box, ruling it out elsewhere in that line |
+  | Box-Line Reduction | A digit in a row or column is locked to one box, ruling it out from the rest of that box |
+  | Naked Pair/Triple | Two (or three) cells in a unit share the same candidates, locking those digits out of the rest of the unit |
+  | Hidden Pair | Two digits only appear in the same two cells in a unit — other candidates in those cells can be ruled out |
+  | X-Wing | A digit appears in exactly two cells in each of two rows (same columns) — rules it out from those columns elsewhere |
+  Consider a scrollable sub-section or collapsible panel so it doesn't overwhelm the existing help content.
 
 - [ ] **Puzzle solver**  
   Needed to support custom puzzles and useful standalone. Given the current puzzle state, solve it using the backtracking solver and fill all empty cells. Should work on both generated and custom puzzles. Could be surfaced as a "Solve" option in the hint/peek system or as a separate button (possibly behind a confirmation since it replaces the challenge).
@@ -71,7 +95,7 @@
 ## Potential Issues to Watch
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v28`.
+- Service worker cache is currently `sudoku-v30`.
 - Hint technique pill not appearing on iPad Safari — needs on-device debugging.
 
 ---

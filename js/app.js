@@ -3,15 +3,57 @@
 import state from './state.js';
 import settings from './settings.js';
 import {
-  buildGrid, renderAll, renderPeersOf,
+  buildGrid, renderAll, renderPeersOf, renderEntryAll,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
   updateHintBtn, updateHintTechnique, dismissHintTechnique, updateNumpad, setNotesModeUI,
-  showLoading, showComplete, showResume, showSettings, showHelp, hideOverlay,
+  showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, hideOverlay,
 } from './ui.js';
-import { initInput } from './input.js';
-import { generateGraded } from './generator.js';
+import { initInput, setInputHandlers } from './input.js';
+import { generateGraded, countSolutions, solve } from './generator.js';
+
+let inEntryMode = false;
+let entryGrid   = new Array(81).fill(0);
+
+function showEntryError(msg) {
+  const el = document.getElementById('entry-error');
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+function enterEntryMode() {
+  inEntryMode = true;
+  entryGrid   = new Array(81).fill(0);
+  setInputHandlers({
+    digit: d => {
+      if (state.selected === -1) return;
+      entryGrid[state.selected] = d;
+      document.getElementById('entry-error').hidden = true;
+      renderEntryAll(entryGrid);
+    },
+    delete: () => {
+      if (state.selected === -1) return;
+      entryGrid[state.selected] = 0;
+      document.getElementById('entry-error').hidden = true;
+      renderEntryAll(entryGrid);
+    },
+  });
+  document.getElementById('mode-controls').hidden  = true;
+  document.getElementById('entry-controls').hidden = false;
+  document.getElementById('entry-error').hidden    = true;
+  document.querySelectorAll('.num-btn[data-digit]').forEach(btn => btn.disabled = false);
+  renderEntryAll(entryGrid);
+}
+
+function exitEntryMode() {
+  inEntryMode = false;
+  setInputHandlers(null);
+  document.getElementById('mode-controls').hidden  = false;
+  document.getElementById('entry-controls').hidden = true;
+}
 
 function startNewGame(difficulty) {
+  if (difficulty === 'custom') { enterEntryMode(); return; }
+  if (inEntryMode) exitEntryMode();
   hideOverlay();
   showLoading(true);
 
@@ -85,7 +127,8 @@ function init() {
   });
 
   document.addEventListener('selectionchange', () => {
-    renderAll(); // peer/same-digit highlights depend on selection
+    if (inEntryMode) renderEntryAll(entryGrid);
+    else renderAll();
   });
 
   document.addEventListener('complete', () => {
@@ -140,6 +183,11 @@ function init() {
     hideOverlay();
   });
 
+  document.getElementById('settings-reset-btn').addEventListener('click', () => {
+    settings.reset();
+    updateSettingsDialog();
+  });
+
   document.querySelectorAll('.toggle-btn[data-key]').forEach(btn => {
     btn.addEventListener('click', () => {
       settings.set(btn.dataset.key, !settings[btn.dataset.key]);
@@ -155,12 +203,34 @@ function init() {
   });
 
   document.getElementById('delete-btn').addEventListener('click', () => {
-    if (state.selected !== -1) state.clearCell(state.selected);
+    if (inEntryMode) {
+      const sel = state.selected;
+      if (sel !== -1 && entryGrid[sel] !== 0) {
+        entryGrid[sel] = 0;
+        document.getElementById('entry-error').hidden = true;
+        renderEntryAll(entryGrid);
+      } else {
+        showClearDialog();
+      }
+      return;
+    }
+    const sel = state.selected;
+    const canDelete = sel !== -1 && !state.raw.given[sel] &&
+                      (state.raw.answer[sel] !== 0 || state.raw.notes[sel].size > 0);
+    if (!canDelete) { showClearDialog(); return; }
+    state.clearCell(sel);
   });
 
   document.querySelectorAll('.num-btn[data-digit]').forEach(btn => {
     btn.addEventListener('click', () => {
       const d = parseInt(btn.dataset.digit, 10);
+      if (inEntryMode) {
+        if (state.selected === -1) return;
+        entryGrid[state.selected] = d;
+        document.getElementById('entry-error').hidden = true;
+        renderEntryAll(entryGrid);
+        return;
+      }
       if (state.selected === -1) return;
       if (state.notesMode) state.toggleNote(state.selected, d);
       else state.setValue(state.selected, d);
@@ -191,6 +261,56 @@ function init() {
   });
 
   document.getElementById('hint-technique-close').addEventListener('click', dismissHintTechnique);
+
+  document.getElementById('entry-confirm-btn').addEventListener('click', () => {
+    const puzzle = [...entryGrid];
+
+    if (puzzle.every(v => v !== 0)) {
+      showEntryError('This puzzle is already complete — leave some cells empty.');
+      return;
+    }
+    const count = countSolutions([...puzzle]);
+    if (count === 0) {
+      showEntryError('No valid solution — check for conflicting digits.');
+      return;
+    }
+    if (count > 1) {
+      showEntryError('Multiple solutions — check for missing or incorrect digits.');
+      return;
+    }
+
+    const solution = solve([...puzzle]);
+    exitEntryMode();
+    state.newGame(puzzle, solution, 'custom');
+    buildGrid();
+    updateHintsDisplay();
+    updateRevealsDisplay();
+    updateErrorsDisplay();
+    updateNumpad();
+    updateHintBtn();
+    updateHintTechnique();
+    setNotesModeUI(state.notesMode);
+  });
+
+  document.getElementById('entry-cancel-btn').addEventListener('click', () => {
+    exitEntryMode();
+    document.getElementById('difficulty-select').value = state.difficulty;
+    renderAll();
+    updateNumpad();
+  });
+
+  document.getElementById('clear-cancel-btn').addEventListener('click', hideOverlay);
+
+  document.getElementById('clear-confirm-btn').addEventListener('click', () => {
+    hideOverlay();
+    if (inEntryMode) {
+      entryGrid = new Array(81).fill(0);
+      document.getElementById('entry-error').hidden = true;
+      renderEntryAll(entryGrid);
+    } else {
+      state.resetPuzzle();
+    }
+  });
 
   document.getElementById('help-btn').addEventListener('click', () => {
     showHelp();

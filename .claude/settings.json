@@ -4,7 +4,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Read(//c/Users/Brian/.claude/projects/c--Users-Brian-Projects-sudoku/memory/**)"
+      "Read(//c/Users/Brian/.claude/projects/c--Users-Brian-Projects-sudoku/memory/**)",
+      "WebFetch(domain:kychin.netlify.app)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Brian\\.claude\\projects\\c--Users-Brian-Projects-sudoku\\memory"

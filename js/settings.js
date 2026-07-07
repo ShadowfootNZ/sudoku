@@ -56,6 +56,13 @@ const settings = {
       localStorage.setItem('sudoku-settings', JSON.stringify({ ..._s }));
     } catch (_) {}
   },
+
+  reset() {
+    Object.assign(_s, DEFAULTS);
+    try { localStorage.removeItem('sudoku-settings'); } catch (_) {}
+    applyFontScale();
+    emit();
+  },
 };
 
 export default settings;

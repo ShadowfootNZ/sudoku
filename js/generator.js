@@ -70,7 +70,7 @@ function solveRandom(board) {
 }
 
 // Count solutions up to `limit` using MRV heuristic (fast uniqueness check)
-function countSolutions(board, limit = 2) {
+export function countSolutions(board, limit = 2) {
   let bestIdx = -1, bestLen = 10;
   for (let i = 0; i < 81; i++) {
     if (board[i] !== EMPTY) continue;
@@ -96,6 +96,25 @@ function countSolutions(board, limit = 2) {
     }
   }
   return count;
+}
+
+// Solve deterministically (ordered digits); returns solved board or null
+function solveFirst(board) {
+  const idx = board.indexOf(EMPTY);
+  if (idx === -1) return true;
+  for (let d = 1; d <= 9; d++) {
+    if (isValid(board, idx, d)) {
+      board[idx] = d;
+      if (solveFirst(board)) return true;
+      board[idx] = EMPTY;
+    }
+  }
+  return false;
+}
+
+export function solve(puzzle) {
+  const board = [...puzzle];
+  return solveFirst(board) ? board : null;
 }
 
 export function generateComplete() {
@@ -343,14 +362,14 @@ export function findHint(board, solution) {
 
     // Naked Single
     for (let i = 0; i < 81; i++) {
-      if (cands[i]?.size === 1) return { type: 'naked-single', cell: i };
+      if (cands[i]?.size === 1) return { type: fallback?.type ?? 'naked-single', cell: i };
     }
 
     // Hidden Single
     for (const unit of UNITS) {
       for (let d = 1; d <= 9; d++) {
         const cs = unit.filter(i => cands[i]?.has(d));
-        if (cs.length === 1) return { type: 'hidden-single', cell: cs[0] };
+        if (cs.length === 1) return { type: fallback?.type ?? 'hidden-single', cell: cs[0] };
       }
     }
 
@@ -374,7 +393,7 @@ export function findHint(board, solution) {
           }
         }
         if (changed) {
-          if (!fallback) fallback = { type: 'pointing', cell: cs[0] };
+          fallback = { type: 'pointing', cell: cs[0] };
           continue outer;
         }
       }
@@ -394,7 +413,7 @@ export function findHint(board, solution) {
           if (!unit.includes(i)) changed = elim(i, d) || changed;
         }
         if (changed) {
-          if (!fallback) fallback = { type: 'box-line', cell: cs[0] };
+          fallback = { type: 'box-line', cell: cs[0] };
           continue outer;
         }
       }
@@ -413,7 +432,7 @@ export function findHint(board, solution) {
             for (const v of ca) changed = elim(i, v) || changed;
           }
           if (changed) {
-            if (!fallback) fallback = { type: 'naked-pair', cell: twos[a] };
+            fallback = { type: 'naked-pair', cell: twos[a] };
             continue outer;
           }
         }
@@ -435,7 +454,7 @@ export function findHint(board, solution) {
             }
           }
           if (changed) {
-            if (!fallback) fallback = { type: 'hidden-pair', cell: c1[0] };
+            fallback = { type: 'hidden-pair', cell: c1[0] };
             continue outer;
           }
         }
@@ -456,7 +475,7 @@ export function findHint(board, solution) {
               for (const v of combo) changed = elim(i, v) || changed;
             }
             if (changed) {
-              if (!fallback) fallback = { type: 'naked-triple', cell: smalls[a] };
+              fallback = { type: 'naked-triple', cell: smalls[a] };
               continue outer;
             }
           }
@@ -482,7 +501,7 @@ export function findHint(board, solution) {
             }
           }
           if (changed) {
-            if (!fallback) fallback = { type: 'x-wing', cell: ra.r * 9 + ra.cols[0] };
+            fallback = { type: 'x-wing', cell: ra.r * 9 + ra.cols[0] };
             continue outer;
           }
         }
@@ -503,7 +522,7 @@ export function findHint(board, solution) {
             }
           }
           if (changed) {
-            if (!fallback) fallback = { type: 'x-wing', cell: ca.rows[0] * 9 + ca.c };
+            fallback = { type: 'x-wing', cell: ca.rows[0] * 9 + ca.c };
             continue outer;
           }
         }

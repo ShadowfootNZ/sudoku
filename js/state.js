@@ -129,6 +129,23 @@ const state = {
     emit('selectionchange', { cell: -1 });
   },
 
+  resetPuzzle() {
+    _s.answer        = new Array(81).fill(EMPTY);
+    _s.notes         = Array.from({ length: 81 }, () => new Set());
+    _s.hintCell      = -1;
+    _s.hintTechnique = null;
+    _s.history       = [];
+    _s.redoStack     = [];
+    _s.fillOrder     = [];
+    _s.hintsUsed     = 0;
+    _s.hintsPointed  = 0;
+    _s.errors        = 0;
+    state.save();
+    emit('statechange', { all: true });
+    emit('hintschanged');
+    emit('errorschanged');
+  },
+
   selectCell(cell) {
     if (_s.selected === cell) return;
     _s.selected = cell;
