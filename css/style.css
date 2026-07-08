@@ -755,14 +755,22 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ── Scribble sink (off-screen, must not be display:none) ───────────────── */
+/* ── Scribble sink (off-screen, must not be display:none) ─────────────────
+   Hidden via transparent background/border/text rather than opacity:0 —
+   WebKit has been actively changing "focusing a hidden editable element"
+   behavior (Safari 26.4 fixed a related cursor-rendering bug for exactly
+   this pattern), and opacity:0 at the moment .focus() is called may cause
+   iPadOS to classify the field as hidden and refuse to arm Scribble. */
 #scribble-input {
   position: fixed;
   left: -9999px;
   top: -9999px;
   width: 1px;
   height: 1px;
-  opacity: 0;
+  background: transparent;
+  border: none;
+  color: transparent;
+  caret-color: transparent;
   pointer-events: none;
   z-index: 10;
   border-radius: 4px;
@@ -771,7 +779,6 @@ html, body {
 /* When focused (Scribble is ready to receive handwriting), show a subtle
    green tint over the cell so the player knows writing is expected */
 #scribble-input:focus {
-  opacity: 1;
   background: rgba(52, 199, 89, 0.13);
   outline: 2px solid rgba(52, 199, 89, 0.55);
   outline-offset: -2px;
