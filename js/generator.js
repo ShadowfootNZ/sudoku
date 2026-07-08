@@ -51,10 +51,10 @@ const UNITS = (() => {
   return us;
 })();
 
-// countSolutions()/solve() only validate digits placed into empty cells during
-// backtracking, so a puzzle whose *givens* already conflict (e.g. two 5s in a
-// row) would otherwise sail through as "uniquely solvable". Custom puzzle entry
-// must run this first.
+// The backtracking search in countSolutions()/solve() only validates digits it
+// places into empty cells, so a puzzle whose *givens* already conflict (e.g.
+// two 5s in a row) would otherwise sail through as "uniquely solvable". Both
+// exported helpers below guard themselves with this check.
 export function hasConflictingGivens(board) {
   return UNITS.some(unit => {
     const seen = new Set();
@@ -93,8 +93,7 @@ function solveRandom(board) {
   return false;
 }
 
-// Count solutions up to `limit` using MRV heuristic (fast uniqueness check)
-export function countSolutions(board, limit = 2) {
+function countSolutionsRec(board, limit) {
   let bestIdx = -1, bestLen = 10;
   for (let i = 0; i < 81; i++) {
     if (board[i] !== EMPTY) continue;
@@ -114,12 +113,21 @@ export function countSolutions(board, limit = 2) {
   for (let d = 1; d <= 9; d++) {
     if (isValid(board, bestIdx, d)) {
       board[bestIdx] = d;
-      count += countSolutions(board, limit);
+      count += countSolutionsRec(board, limit);
       board[bestIdx] = EMPTY;
       if (count >= limit) return count;
     }
   }
   return count;
+}
+
+// Count solutions up to `limit` using MRV heuristic (fast uniqueness check).
+// Guards against boards whose givens already conflict (see hasConflictingGivens
+// above) — the recursive search only validates digits placed during backtracking,
+// so it would otherwise report a conflicting board as uniquely solvable.
+export function countSolutions(board, limit = 2) {
+  if (hasConflictingGivens(board)) return 0;
+  return countSolutionsRec(board, limit);
 }
 
 // Solve deterministically (ordered digits); returns solved board or null
@@ -137,6 +145,7 @@ function solveFirst(board) {
 }
 
 export function solve(puzzle) {
+  if (hasConflictingGivens(puzzle)) return null;
   const board = [...puzzle];
   return solveFirst(board) ? board : null;
 }

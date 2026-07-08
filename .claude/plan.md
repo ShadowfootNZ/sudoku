@@ -29,7 +29,6 @@ sudoku/
 │   └── style.css       # All styles, CSS custom props, dark mode
 └── js/
     ├── generator.js    # Backtracking solver + puzzle generator (main thread)
-    ├── worker.js       # Unused — kept in repo, do not delete (SW caches it)
     ├── state.js        # All game state, undo/redo, localStorage
     ├── ui.js           # DOM rendering, cell class management
     ├── input.js        # Pointer events, palm rejection, Scribble
@@ -208,10 +207,9 @@ Changing defaults in `settings.js` only affects fresh installs (no prior `sudoku
 - Hint stepper (`.hint-step-btn`): `min-width/min-height: 44px` for the touch target while keeping the pill's font-size small — the pill's height grows to fit the 44px buttons (flex `align-items: center`), a deliberate tradeoff of pill compactness for iPad touch accessibility.
 
 ## PWA / Icons Notes
-- Service worker cache name is `sudoku-v40`. Bump this any time cached files need to be force-evicted.
+- Service worker cache name is `sudoku-v42`. Bump this any time cached files need to be force-evicted.
 - `sw.js` itself is NOT cached by the SW (intentional) — browser always fetches it fresh on navigation for update checks.
 - **Update flow**: install handler does NOT call `skipWaiting()`. New SW installs, then waits. App detects `reg.waiting` (or `updatefound` → `statechange === 'installed'`) and shows "Update available" row in Settings → App group. User taps "Update" → `postMessage('SKIP_WAITING')` → SW activates → `controllerchange` → `location.reload()`. Settings (localStorage) survive the reload.
-- `worker.js` IS in the SW's ASSETS list — don't remove the file even though it's unused.
 - **Browser favicon**: footprint icons (`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`).
 - **iPad/iPhone home screen** (`apple-touch-icon`): `icons/icon-512.png` — the sudoku image, NOT the footprint.
 - **PWA manifest icons**: `favicon-192x192.png` + `favicon-512x512.png` (footprint) for Android/Chrome installs.

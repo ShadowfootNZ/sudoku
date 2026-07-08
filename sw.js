@@ -1,6 +1,6 @@
 // Service worker: cache-first strategy for all static assets
 
-const CACHE = 'sudoku-v41';
+const CACHE = 'sudoku-v42';
 const BASE  = self.registration.scope;
 
 const ASSETS = [
@@ -13,7 +13,6 @@ const ASSETS = [
   'js/ui.js',
   'js/input.js',
   'js/generator.js',
-  'js/worker.js',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -47,6 +46,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   // Only handle GET requests for our own origin
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
