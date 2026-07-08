@@ -17,15 +17,16 @@ export function setInputHandlers(handlers) {
 // activates at the right place on screen, then focus it.
 function focusScribble(cellEl) {
   const scribble = document.getElementById('scribble-input');
-  if (!scribble) return;
-  if (cellEl) {
-    const r = cellEl.getBoundingClientRect();
-    scribble.style.left   = r.left   + 'px';
-    scribble.style.top    = r.top    + 'px';
-    scribble.style.width  = r.width  + 'px';
-    scribble.style.height = r.height + 'px';
-    scribbleCell = parseInt(cellEl.dataset.cell, 10);
-  }
+  // No cell under the pointer (e.g. touch landed on a grid gap/edge) — focusing
+  // now would leave the input at its off-screen default (1x1px @ -9999,-9999),
+  // which iOS auto-zooms toward and gets the viewport stuck misaligned.
+  if (!scribble || !cellEl) return;
+  const r = cellEl.getBoundingClientRect();
+  scribble.style.left   = r.left   + 'px';
+  scribble.style.top    = r.top    + 'px';
+  scribble.style.width  = r.width  + 'px';
+  scribble.style.height = r.height + 'px';
+  scribbleCell = parseInt(cellEl.dataset.cell, 10);
   scribble.focus({ preventScroll: true });
 }
 
