@@ -79,8 +79,12 @@ export function initInput() {
       // which would reposition the scribble input off-screen. The cell div itself
       // survives renderAll(); only its children are replaced.
       const cellEl = e.target.closest('[data-cell]');
-      handleCellSelect(e);
+      // Focus FIRST, before handleCellSelect's renderAll() does a full 81-cell
+      // re-render — iPadOS appears to require .focus() to be the immediate,
+      // uninterrupted response to the touch to arm Scribble; any synchronous
+      // work first (even a few ms) and it falls back to the standard keyboard.
       focusScribble(cellEl);
+      handleCellSelect(e);
     } else if (e.pointerType === 'touch') {
       if (!penActive) {
         // 50 ms debounce: if the pen fires concurrently (palm landing before
