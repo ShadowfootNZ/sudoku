@@ -31,12 +31,14 @@ function focusScribble(cellEl) {
 }
 
 function handleCellSelect(e) {
+  if (state.completing) return;
   const cell = e.target.closest('[data-cell]');
   if (!cell) return;
   state.selectCell(parseInt(cell.dataset.cell, 10));
 }
 
 function applyDigit(digit) {
+  if (state.completing) return;
   if (_handlers) { _handlers.digit(digit); return; }
   if (state.selected === -1) return;
   if (state.notesMode) {
@@ -47,8 +49,38 @@ function applyDigit(digit) {
 }
 
 function applyDelete() {
+  if (state.completing) return;
   if (_handlers) { _handlers.delete(); return; }
   if (state.selected !== -1) state.clearCell(state.selected);
+}
+
+function isFormControl(el) {
+  return !!el?.closest?.('input, textarea, select, button, [contenteditable="true"]');
+}
+
+function moveSelection(key) {
+  if (state.selected === -1) {
+    state.selectCell(0);
+    return true;
+  }
+
+  if (key === 'ArrowLeft' && state.selected > 0) {
+    state.selectCell(state.selected - 1);
+    return true;
+  }
+  if (key === 'ArrowRight' && state.selected < 80) {
+    state.selectCell(state.selected + 1);
+    return true;
+  }
+  if (key === 'ArrowUp' && state.selected >= 9) {
+    state.selectCell(state.selected - 9);
+    return true;
+  }
+  if (key === 'ArrowDown' && state.selected <= 71) {
+    state.selectCell(state.selected + 9);
+    return true;
+  }
+  return false;
 }
 
 export function initInput() {
@@ -60,6 +92,7 @@ export function initInput() {
     // and suppress Scribble activation. Scroll/zoom prevented by touch-action:none;
     // text selection prevented by user-select:none.
     if (e.pointerType !== 'pen') e.preventDefault();
+    if (state.completing) return;
 
     if (e.pointerType === 'pen') {
       penActive = true;
@@ -98,6 +131,7 @@ export function initInput() {
 
   // Pen hover: highlight cell + pre-position Scribble input so it's ready before writing starts
   grid.addEventListener('pointerover', e => {
+    if (state.completing) return;
     if (e.pointerType === 'pen' && !(e.buttons & 1)) {
       document.querySelectorAll('.cell.hover').forEach(c => c.classList.remove('hover'));
       const cell = e.target.closest('[data-cell]');
@@ -119,6 +153,11 @@ export function initInput() {
   const scribble = document.getElementById('scribble-input');
 
   scribble.addEventListener('input', () => {
+    if (state.completing) {
+      scribble.value = '';
+      scribble.blur();
+      return;
+    }
     // Scribble may suppress pointerdown (intercepting the gesture), so the cell
     // might not be selected yet. Ensure the cell under the scribble input is selected.
     if (scribbleCell !== -1 && state.selected !== scribbleCell) state.selectCell(scribbleCell);
@@ -145,39 +184,42 @@ export function initInput() {
   });
 
   scribble.addEventListener('keydown', e => {
+    if (state.completing) return;
     // Ensure correct cell is selected (same pointerdown-suppression guard as above)
     if (scribbleCell !== -1 && state.selected !== scribbleCell) state.selectCell(scribbleCell);
 
     if (e.key === 'Backspace' || e.key === 'Delete') {
       e.preventDefault();
       applyDelete();
-    } else if (e.key === 'ArrowLeft'  && state.selected > 0)  state.selectCell(state.selected - 1);
-    else if (e.key === 'ArrowRight' && state.selected < 80) state.selectCell(state.selected + 1);
-    else if (e.key === 'ArrowUp'    && state.selected >= 9)  state.selectCell(state.selected - 9);
-    else if (e.key === 'ArrowDown'  && state.selected <= 71) state.selectCell(state.selected + 9);
+    } else if (e.key.startsWith('Arrow') && moveSelection(e.key)) {
+      e.preventDefault();
+    }
   });
 
   // ── Global keyboard (desktop convenience) ──────────────────────────────
   document.addEventListener('keydown', e => {
     if (document.activeElement === scribble) return;
+    if (isFormControl(e.target)) return;
+    if (state.completing) return;
     // Modal dialogs (resume/settings/clear/help/complete) sit on top of the
     // grid but don't own keyboard focus, so digit/undo/redo shortcuts would
     // otherwise reach through and mutate the puzzle behind them.
     if (!document.getElementById('overlay').classList.contains('hidden')) return;
     const d = parseInt(e.key, 10);
+    const key = e.key.toLowerCase();
     if (d >= 1 && d <= 9) {
       applyDigit(d);
     } else if (e.key === 'Backspace' || e.key === 'Delete') {
       applyDelete();
-    } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+    } else if (key === 'z' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
-      state.undo();
-    } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+      if (e.shiftKey) state.redo();
+      else state.undo();
+    } else if (key === 'y' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       state.redo();
-    } else if (e.key === 'ArrowLeft'  && state.selected > 0)  state.selectCell(state.selected - 1);
-    else if (e.key === 'ArrowRight' && state.selected < 80) state.selectCell(state.selected + 1);
-    else if (e.key === 'ArrowUp'    && state.selected >= 9)  state.selectCell(state.selected - 9);
-    else if (e.key === 'ArrowDown'  && state.selected <= 71) state.selectCell(state.selected + 9);
+    } else if (e.key.startsWith('Arrow') && moveSelection(e.key)) {
+      e.preventDefault();
+    }
   });
 }

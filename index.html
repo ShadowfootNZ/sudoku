@@ -74,7 +74,10 @@
     </div>
     <div id="mode-controls">
       <button id="notes-btn"    class="mode-btn" title="Toggle notes mode">✏️ Notes</button>
-      <button id="undo-btn"     class="mode-btn" title="Undo">↩️ Undo</button>
+      <div id="undo-wrap" class="mode-action">
+        <button id="undo-btn" class="mode-btn" title="Undo">↩️ Undo</button>
+        <button id="redo-popover-btn" class="redo-popover" type="button" hidden>↪️ Redo</button>
+      </div>
       <button id="fill-btn"     class="mode-btn" title="Fill candidates">✍️ Fill</button>
       <button id="hint-btn"     class="mode-btn" title="Hint">🔍 Hint</button>
       <button id="settings-btn" class="mode-btn" title="Settings">⚙️ Settings</button>
@@ -100,7 +103,8 @@
        autocorrect="off"
        autocapitalize="off"
        spellcheck="false"
-       aria-hidden="true"
+       role="presentation"
+       aria-label="Handwriting input"
        tabindex="-1">
 
 <!-- Overlay + dialogs -->
@@ -156,7 +160,7 @@
         <div class="settings-group">
           <div class="settings-group-title">Hints</div>
           <div class="settings-row">
-            <span>Show technique on hint</span>
+            <span>Tutorial mode</span>
             <button class="toggle-btn" data-key="showStrategyOnHint"></button>
           </div>
         </div>

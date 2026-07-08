@@ -4,6 +4,7 @@ import state from './state.js';
 import settings from './settings.js';
 
 let cells = [];
+let completionRun = 0;
 
 export function buildGrid() {
   const grid = document.getElementById('grid');
@@ -255,11 +256,14 @@ export function showOverlay(dialogId) {
 }
 
 export function hideOverlay() {
+  state.setCompleting(false);
   document.getElementById('overlay').classList.add('hidden');
   document.querySelectorAll('.dialog').forEach(d => d.classList.add('hidden'));
 }
 
 export function showComplete() {
+  const run = ++completionRun;
+  state.setCompleting(true);
   const fillOrder = state.fillOrder; // oldest fill first
   const n = fillOrder.length;
 
@@ -288,6 +292,7 @@ export function showComplete() {
       el.classList.remove('completing', 'flash-hint', 'flash-peek');
       el.style.animationDelay = '';
     });
+    if (run !== completionRun || !state.completing) return;
     const detailEl = document.getElementById('complete-details');
     const totalHelp = state.hintsUsed + state.hintsPointed;
     detailEl.textContent = totalHelp === 0

@@ -8,7 +8,7 @@ const DEFAULTS = {
   highlightLegal:     false,   // legal placement tint
   conflictCheck:      true,   // error / conflict highlighting
   fontSize:           'medium',
-  showStrategyOnHint: false,   // show technique name alongside hint (future)
+  showStrategyOnHint: false,   // show technique name alongside hint
 };
 
 const _s = { ...DEFAULTS };

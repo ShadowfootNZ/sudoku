@@ -1,26 +1,11 @@
 // Game state: board, notes, undo history, localStorage persistence
 
-import { findHint } from './generator.js';
+import { findHint, PEERS as GENERATOR_PEERS } from './generator.js';
 import settings from './settings.js';
 
 const EMPTY = 0;
 
-function buildPeers() {
-  return Array.from({ length: 81 }, (_, i) => {
-    const row = Math.floor(i / 9), col = i % 9;
-    const br = Math.floor(row / 3) * 3, bc = Math.floor(col / 3) * 3;
-    const s = new Set();
-    for (let c = 0; c < 9; c++) s.add(row * 9 + c);
-    for (let r = 0; r < 9; r++) s.add(r * 9 + col);
-    for (let r = br; r < br + 3; r++)
-      for (let c = bc; c < bc + 3; c++)
-        s.add(r * 9 + c);
-    s.delete(i);
-    return [...s];
-  });
-}
-
-export const PEERS = buildPeers();
+export const PEERS = GENERATOR_PEERS;
 
 const _s = {
   given:        new Array(81).fill(EMPTY),
@@ -38,7 +23,11 @@ const _s = {
   errors:       0,
   difficulty:   'medium',
   fillOrder:    [], // cell indices in the order they were filled by the player
+  completing:   false,
 };
+
+const boardOk = a => Array.isArray(a) && a.length === 81;
+const notesOk = a => Array.isArray(a) && a.length === 81 && a.every(Array.isArray);
 
 function emit(type, detail = {}) {
   document.dispatchEvent(new CustomEvent(type, { detail }));
@@ -73,7 +62,6 @@ function snapshot() {
     notes:       _s.notes.map(s => new Set(s)),
     hintChain:   _s.hintChain,
     hintStep:    _s.hintStep,
-    hintsUsed:   _s.hintsUsed,
     fillOrder:   [..._s.fillOrder],
   };
 }
@@ -83,7 +71,6 @@ function restoreSnapshot(snap) {
   _s.notes       = snap.notes;
   _s.hintChain   = snap.hintChain ?? null;
   _s.hintStep    = snap.hintStep ?? 0;
-  _s.hintsUsed   = snap.hintsUsed;
   _s.fillOrder   = snap.fillOrder ?? [];
 }
 
@@ -117,11 +104,21 @@ const state = {
   get difficulty()   { return _s.difficulty; },
   get notesMode()    { return _s.notesMode; },
   get fillOrder()    { return _s.fillOrder; },
+  get completing()   { return _s.completing; },
+  get canRedo()      { return _s.redoStack.length > 0; },
   get raw()          { return _s; },
   PEERS,
   isConflict,
 
-  set notesMode(v)     { _s.notesMode = v;     state.save(); },
+  set notesMode(v) {
+    if (_s.completing) return;
+    _s.notesMode = v;
+    state.save();
+  },
+
+  setCompleting(v) {
+    _s.completing = !!v;
+  },
 
   newGame(puzzle, solution, difficulty) {
     _s.given       = [...puzzle];
@@ -137,6 +134,7 @@ const state = {
     _s.hintsPointed = 0;
     _s.errors       = 0;
     _s.fillOrder    = [];
+    _s.completing   = false;
     state.save();
     emit('statechange', { all: true });
     emit('selectionchange', { cell: -1 });
@@ -152,6 +150,7 @@ const state = {
     _s.hintsUsed     = 0;
     _s.hintsPointed  = 0;
     _s.errors        = 0;
+    _s.completing    = false;
     state.save();
     emit('statechange', { all: true });
     emit('hintschanged');
@@ -159,12 +158,14 @@ const state = {
   },
 
   selectCell(cell) {
+    if (_s.completing) return;
     if (_s.selected === cell) return;
     _s.selected = cell;
     emit('selectionchange', { cell });
   },
 
   setValue(cell, digit) {
+    if (_s.completing) return;
     if (_s.given[cell]) return;
     pushHistory();
     if (settings.conflictCheck && _s.answer[cell] !== digit && isConflict(cell, digit)) {
@@ -184,6 +185,7 @@ const state = {
   },
 
   clearCell(cell) {
+    if (_s.completing) return;
     if (_s.given[cell]) return;
     pushHistory();
     _s.answer[cell] = EMPTY;
@@ -199,6 +201,7 @@ const state = {
   // Intentionally no pushHistory() — see the comment above undo(). Notes are
   // not covered by undo/redo.
   toggleNote(cell, digit) {
+    if (_s.completing) return;
     if (_s.given[cell] || _s.answer[cell]) return;
     const notes = _s.notes[cell];
     if (notes.has(digit)) {
@@ -213,6 +216,7 @@ const state = {
 
   // Intentionally no pushHistory() — see the comment above undo().
   fillCandidates(cell) {
+    if (_s.completing) return;
     if (_s.given[cell] || _s.answer[cell]) return;
     _s.notes[cell] = validCandidates(cell);
     invalidateHint();
@@ -222,6 +226,7 @@ const state = {
 
   // Intentionally no pushHistory() — see the comment above undo().
   fillAllCandidates() {
+    if (_s.completing) return;
     for (let i = 0; i < 81; i++) {
       if (!_s.given[i] && !_s.answer[i]) {
         _s.notes[i] = validCandidates(i);
@@ -236,6 +241,7 @@ const state = {
   // toggleNote/fillCandidates/fillAllCandidates deliberately don't push
   // history: notes are scratch work, not moves to step back through.
   undo() {
+    if (_s.completing) return;
     if (!_s.history.length) return;
     _s.redoStack.push(snapshot());
     restoreSnapshot(_s.history.pop());
@@ -245,6 +251,7 @@ const state = {
   },
 
   redo() {
+    if (_s.completing) return;
     if (!_s.redoStack.length) return;
     _s.history.push(snapshot());
     restoreSnapshot(_s.redoStack.pop());
@@ -254,11 +261,12 @@ const state = {
   },
 
   getHint() {
+    if (_s.completing) return;
     if (_s.hintChain) return;
     const board = _s.given.map((g, i) => g || _s.answer[i]);
     const result = findHint(board, _s.solution);
     if (result.type === 'error') { emit('hinterror'); return; }
-    if (result.type === 'stuck') return;
+    if (result.type === 'stuck') { emit('hintstuck'); return; }
     _s.hintChain = result.steps;
     _s.hintStep  = 0;
     _s.hintsPointed++;
@@ -269,18 +277,21 @@ const state = {
   },
 
   hintStepNext() {
+    if (_s.completing) return;
     if (!_s.hintChain || _s.hintStep >= _s.hintChain.length - 1) return;
     _s.hintStep++;
     emit('hintstepchanged');
   },
 
   hintStepPrev() {
+    if (_s.completing) return;
     if (!_s.hintChain || _s.hintStep <= 0) return;
     _s.hintStep--;
     emit('hintstepchanged');
   },
 
   peekCell(cell) {
+    if (_s.completing) return;
     if (_s.given[cell] || _s.answer[cell]) return;
     pushHistory();
     _s.answer[cell] = _s.solution[cell];
@@ -328,7 +339,7 @@ const state = {
       const raw = localStorage.getItem('sudoku-save');
       if (!raw) return false;
       const d = JSON.parse(raw);
-      if (!Array.isArray(d.given) || !Array.isArray(d.solution)) return false;
+      if (!boardOk(d.given) || !boardOk(d.solution) || !boardOk(d.answer) || !notesOk(d.notes)) return false;
       _s.given         = d.given;
       _s.answer        = d.answer;
       _s.notes         = d.notes.map(a => new Set(a));
@@ -340,6 +351,7 @@ const state = {
       _s.errors        = d.errors        ?? 0;
       _s.selected      = d.selected      ?? -1;
       _s.fillOrder     = d.fillOrder     ?? [];
+      _s.completing    = false;
       invalidateHint();
       _s.history       = [];
       _s.redoStack     = [];

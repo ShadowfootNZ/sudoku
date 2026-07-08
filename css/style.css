@@ -440,6 +440,15 @@ html, body {
   gap: 6px;
 }
 
+.mode-action {
+  position: relative;
+  min-width: 0;
+}
+
+.mode-action > .mode-btn {
+  width: 100%;
+}
+
 .mode-btn {
   height: 42px;
   font-size: 13px;
@@ -468,6 +477,45 @@ html, body {
 
 .mode-btn:active {
   opacity: 0.7;
+}
+
+.redo-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  min-width: 82px;
+  height: 42px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--mode-active);
+  color: var(--mode-active-fg);
+  box-shadow: var(--shadow);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.08s, transform 0.08s;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+.redo-popover:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.redo-popover.active {
+  filter: brightness(1.08);
+  transform: translateX(-50%) translateY(0) scale(1.04);
 }
 
 /* ── Custom puzzle entry ────────────────────────────────────────────────── */

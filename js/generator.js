@@ -1,5 +1,5 @@
-// Sudoku generator: backtracking solver + puzzle maker
-// Loaded inside a Web Worker — no DOM access.
+// Sudoku generator: pure solver and puzzle logic, no DOM access.
+// Imported by app code and Node tests.
 
 const EMPTY = 0;
 
