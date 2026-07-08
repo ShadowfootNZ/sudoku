@@ -647,6 +647,26 @@ html, body {
   margin: 0;
 }
 
+.technique-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.technique-list dt {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--given-color);
+}
+
+.technique-list dd {
+  margin: 1px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--note-color);
+}
+
 .dialog-btns button.btn-secondary {
   background: var(--mode-bg);
   color: var(--given-color);

@@ -5,7 +5,7 @@ import settings from './settings.js';
 import {
   buildGrid, renderAll, renderPeersOf, renderEntryAll,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
-  updateHintBtn, updateHintTechnique, dismissHintTechnique, renderHintStep, updateNumpad, setNotesModeUI,
+  updateHintBtn, updateFillBtn, updateHintTechnique, dismissHintTechnique, renderHintStep, updateNumpad, setNotesModeUI,
   showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, hideOverlay,
 } from './ui.js';
 import { initInput, setInputHandlers } from './input.js';
@@ -69,6 +69,7 @@ function startNewGame(difficulty) {
       updateErrorsDisplay();
       updateNumpad();
       updateHintBtn();
+      updateFillBtn();
       updateHintTechnique();
       setNotesModeUI(state.notesMode);
     });
@@ -123,12 +124,14 @@ function init() {
     updateHintsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateFillBtn();
     updateHintTechnique();
   });
 
   document.addEventListener('selectionchange', () => {
     if (inEntryMode) renderEntryAll(entryGrid);
     else renderAll();
+    updateFillBtn();
   });
 
   document.addEventListener('complete', () => {
@@ -247,6 +250,7 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateFillBtn();
     updateHintTechnique();
     setNotesModeUI(state.notesMode);
     document.getElementById('difficulty-select').value = state.difficulty;
@@ -295,6 +299,7 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateFillBtn();
     updateHintTechnique();
     setNotesModeUI(state.notesMode);
   });
@@ -338,6 +343,7 @@ function init() {
     updateErrorsDisplay();
     updateNumpad();
     updateHintBtn();
+    updateFillBtn();
     updateHintTechnique();
     showResume();
   } else {

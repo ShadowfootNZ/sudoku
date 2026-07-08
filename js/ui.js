@@ -175,6 +175,12 @@ export function updateHintBtn() {
   btn.textContent = state.hintCell !== -1 ? '👁 Peek' : '🔍 Hint';
 }
 
+export function updateFillBtn() {
+  const btn = document.getElementById('fill-btn');
+  if (!btn) return;
+  btn.textContent = state.selected === -1 ? '✍️ Fill All' : '✍️ Fill';
+}
+
 const TECHNIQUE_LABELS = {
   'naked-single':  'Naked Single',
   'hidden-single': 'Hidden Single',

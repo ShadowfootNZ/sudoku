@@ -208,6 +208,34 @@
         <strong>Apple Pencil</strong>
         <p>Tap any cell with the Pencil to select it, then write a digit with Scribble to enter it. The green tint on the selected cell means Scribble is ready to receive handwriting. You can also tap the numpad buttons directly with the Pencil.</p>
       </div>
+      <div class="help-section">
+        <strong>Solving Techniques</strong>
+        <p>When a hint is shown, the pill names the technique and the grid highlights it: purple cells are the <b>pattern</b> that justifies the move, and lighter muted-purple cells are <b>candidates being eliminated</b>. Multi-step hints can be stepped through with the ‹ › buttons on the pill. Here's what each technique means:</p>
+        <dl class="technique-list">
+          <dt>Naked Single</dt>
+          <dd>A cell has only one candidate left, so it must be that digit.</dd>
+          <dt>Hidden Single</dt>
+          <dd>A digit has only one possible cell left in a row, column, or box, even though that cell still shows other candidates too.</dd>
+          <dt>Pointing Pair/Triple</dt>
+          <dd>A digit's candidates within a box all fall in a single row or column, so that digit can be removed from the rest of that row/column outside the box.</dd>
+          <dt>Box-Line Reduction</dt>
+          <dd>A digit's candidates within a row or column all fall in a single box, so that digit can be removed from the rest of that box.</dd>
+          <dt>Naked Pair</dt>
+          <dd>Two cells in the same row, column, or box contain only the same two candidates, so those two digits can be removed from every other cell in that unit.</dd>
+          <dt>Hidden Pair</dt>
+          <dd>Two digits only appear as candidates in the same two cells of a unit, so every other candidate in those two cells can be removed.</dd>
+          <dt>Naked Triple</dt>
+          <dd>Three cells in a unit contain only three candidates between them, so those three digits can be removed from the rest of the unit.</dd>
+          <dt>X-Wing</dt>
+          <dd>A digit's candidates in two rows fall in the same two columns (or vice versa), forming a rectangle that lets you remove that digit from the rest of those columns or rows.</dd>
+          <dt>Swordfish</dt>
+          <dd>Like an X-Wing but spanning three rows/columns instead of two — the wider pattern still lets you remove the digit elsewhere in those lines.</dd>
+          <dt>XY-Wing</dt>
+          <dd>Three cells with exactly two candidates each link together so a shared digit can be removed from any cell that sees both of the outer two cells.</dd>
+          <dt>Unique Rectangle</dt>
+          <dd>Four cells forming a rectangle across two boxes would allow two different solutions if left alone — since a Sudoku has only one, the extra candidate causing that can be removed.</dd>
+        </dl>
+      </div>
     </div>
     <div class="dialog-btns">
       <button id="help-close-btn">Got it</button>
