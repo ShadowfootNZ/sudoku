@@ -261,18 +261,25 @@ export function showComplete() {
   const reversed = fillOrder.slice().reverse();
   const maxStagger = n > 1 ? Math.min(600, (n - 1) * 30) : 0;
 
+  const flashClass = state.errors > 0 || state.hintsUsed > 0
+    ? 'flash-peek'
+    : state.hintsPointed > 0
+      ? 'flash-hint'
+      : null;
+
   reversed.forEach((cellIdx, i) => {
     const el = cells[cellIdx];
     if (!el) return;
     const delay = n > 1 ? Math.round((i / (n - 1)) * maxStagger) : 0;
     el.style.animationDelay = `${delay}ms`;
     el.classList.add('completing');
+    if (flashClass) el.classList.add(flashClass);
   });
 
   const flashDuration = 480; // matches CSS
   setTimeout(() => {
     cells.forEach(el => {
-      el.classList.remove('completing');
+      el.classList.remove('completing', 'flash-hint', 'flash-peek');
       el.style.animationDelay = '';
     });
     const detailEl = document.getElementById('complete-details');

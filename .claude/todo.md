@@ -3,7 +3,6 @@
 ## In Progress / Needs Testing
 - [ ] **Palm rejection** — 50ms touch debounce + 500ms pen-release window. Needs further iPad testing.
 - [~] **Scribble (Apple Pencil handwriting)** — significantly improved across multiple fixes. Latest fix: blur after each write so iPadOS resets the handwriting session for the next stroke. User reports "working much better" — monitor for remaining edge cases.
-- [x] **Hint technique pill on iPad Safari** — RESOLVED (2026-07-06): the pill works; earlier "not appearing" reports were user error from testing against a stale cached version, not a code bug.
 
 ---
 
@@ -73,7 +72,7 @@
 
 - [ ] **Investigate Dancing Links (DLX) for puzzle generation** — Donald Knuth's Algorithm X implemented with Dancing Links is the standard fast approach for exact cover problems, which Sudoku generation/solving maps onto naturally. Current backtracking solver works but DLX may offer faster generation (especially for hard/veryhard) and cleaner architecture. Worth evaluating if generation speed becomes an issue or when tackling technique-based grading.
 
-- [ ] **Fix gold completion animation when hints were used** — the gold flash reward animation plays even when the player used hints or peeks. Consider suppressing or replacing the animation (e.g. no animation, or a muted colour) when `hintsPointed > 0` or `hintsUsed > 0`.
+- [x] **Completion animation reflects help level** — always plays, but the flash colour now signals how much help was used: gold (`--completion-flash-clean`) when `errors === 0 && hintsUsed === 0 && hintsPointed === 0`; purple (`--completion-flash-hint`) when 🔍 Hint was used but no 👁 Peek and no errors; red (`--completion-flash-peek`) when any 👁 Peek was used or any error occurred. Implemented via a `flash-hint`/`flash-peek` class toggling a `--completion-flash-color` custom property consumed by the single `completion-flash` keyframes in [style.css](../css/style.css). Logic lives in `showComplete()` in [ui.js](../js/ui.js). SW cache bumped v40→v41.
 
 - [x] **Clear settings** — "Reset to defaults" button in Settings dialog; calls `settings.reset()` which restores DEFAULTS and removes `sudoku-settings` from localStorage.
 
@@ -97,9 +96,10 @@
 ---
 
 ## Potential Issues to Watch
+- Before pushing GitHub fixes for iPad-only input/Scribble issues, offer to publish or serve a LAN-accessible debug version first so it can be tested on the iPad over home Wi-Fi without changing production.
 - Scribble: blur-after-write resets iPadOS handwriting session. If the user lifts the pencil very quickly the hover may not re-trigger focusScribble — watch for cases where the green tint doesn't reappear.
 - Palm rejection timing may still be imperfect for some writing styles.
-- Service worker cache is currently `sudoku-v38`.
+- Service worker cache is currently `sudoku-v41`.
 - Hint chain stepper (2026-07-07, hint-chains phase 4): verified in a desktop headless-Chromium browser, not on-device. Should still confirm on iPad Safari: the two new 44×44px Prev/Next touch targets fit comfortably next to the existing × dismiss button on the pill without crowding, and the purple pattern/elim highlight colors read well in real iPad display conditions (the pill's `position:fixed` placement itself was already confirmed working on iPad as of 2026-07-06).
 
 ---

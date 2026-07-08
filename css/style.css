@@ -33,6 +33,9 @@
   --radius:        10px;
   --font-scale:    1;
   --error-text:    #c0392b;
+  --completion-flash-clean: rgba(245, 197, 24, 0.88);
+  --completion-flash-hint:  rgba(138, 63, 168, 0.75);
+  --completion-flash-peek:  rgba(192, 16, 16, 0.75);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,6 +70,8 @@
     --dialog-bg:     #2c2c2e;
     --overlay-bg:    rgba(0,0,0,0.65);
     --error-text:    #ff7675;
+    --completion-flash-hint: rgba(208, 138, 255, 0.75);
+    --completion-flash-peek: rgba(255, 112, 112, 0.75);
   }
 }
 
@@ -347,7 +352,7 @@ html, body {
 
 @keyframes completion-flash {
   0%   { background-color: transparent; }
-  15%  { background-color: rgba(245, 197, 24, 0.88); }
+  15%  { background-color: var(--completion-flash-color, var(--completion-flash-clean)); }
   100% { background-color: transparent; }
 }
 
@@ -355,6 +360,9 @@ html, body {
   animation: completion-flash 480ms ease-out;
   transition: none;
 }
+
+.cell.completing.flash-hint { --completion-flash-color: var(--completion-flash-hint); }
+.cell.completing.flash-peek { --completion-flash-color: var(--completion-flash-peek); }
 
 /* ── Controls ───────────────────────────────────────────────────────────── */
 #controls {
