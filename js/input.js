@@ -14,12 +14,11 @@ export function setInputHandlers(handlers) {
 }
 
 // Position the hidden Scribble input over a grid cell so iPadOS Scribble
-// activates at the right place on screen, then focus it.
-function focusScribble(cellEl) {
+// activates at the right place on screen.
+function positionScribble(cellEl) {
   const scribble = document.getElementById('scribble-input');
-  // No cell under the pointer (e.g. touch landed on a grid gap/edge) — focusing
-  // now would leave the input at its off-screen default (1x1px @ -9999,-9999),
-  // which iOS auto-zooms toward and gets the viewport stuck misaligned.
+  // No cell under the pointer (e.g. touch landed on a grid gap/edge) would
+  // leave the input at its off-screen default (1x1px @ -9999,-9999).
   if (!scribble || !cellEl) return;
   const r = cellEl.getBoundingClientRect();
   scribble.style.left   = r.left   + 'px';
@@ -27,6 +26,15 @@ function focusScribble(cellEl) {
   scribble.style.width  = r.width  + 'px';
   scribble.style.height = r.height + 'px';
   scribbleCell = parseInt(cellEl.dataset.cell, 10);
+}
+
+// Focusing must happen on actual pen contact (pointerdown), not on hover —
+// iPadOS only arms Scribble (vs. showing the standard keyboard) when focus
+// originates from the touch itself. Hover only pre-positions (see below).
+function focusScribble(cellEl) {
+  const scribble = document.getElementById('scribble-input');
+  positionScribble(cellEl);
+  if (!scribble || !cellEl) return;
   scribble.focus({ preventScroll: true });
 }
 
@@ -96,14 +104,15 @@ export function initInput() {
     }
   });
 
-  // Pen hover: highlight cell + pre-position Scribble input so it's ready before writing starts
+  // Pen hover: highlight cell + pre-position Scribble input so it is ready
+  // before writing starts, without focusing early and popping the keyboard.
   grid.addEventListener('pointerover', e => {
     if (e.pointerType === 'pen' && !(e.buttons & 1)) {
       document.querySelectorAll('.cell.hover').forEach(c => c.classList.remove('hover'));
       const cell = e.target.closest('[data-cell]');
       if (cell) {
         cell.classList.add('hover');
-        focusScribble(cell); // Scribble needs the input on-screen during hover, before pointerdown
+        positionScribble(cell);
       }
     }
   });
