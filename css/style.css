@@ -769,14 +769,9 @@ html, body {
 }
 
 /* When focused (Scribble is ready to receive handwriting), show a subtle
-   green tint over the cell so the player knows writing is expected.
-   pointer-events must switch to auto here — Scribble needs the pen's
-   strokes to actually hit-test to this element while writing, not just
-   pass through to the cell beneath it (which is what pointer-events:none
-   normally does, so unfocused taps still reach the grid). */
+   green tint over the cell so the player knows writing is expected */
 #scribble-input:focus {
   opacity: 1;
-  pointer-events: auto;
   background: rgba(52, 199, 89, 0.13);
   outline: 2px solid rgba(52, 199, 89, 0.55);
   outline-offset: -2px;
