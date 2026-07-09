@@ -2,9 +2,14 @@
   "slug": "sudoku",
   "title": "Sudoku",
   "summary": "A standalone Sudoku puzzle game with Apple Pencil support.",
-  "description": "Play Sudoku puzzles in a clean, installable web app with touch and Apple Pencil friendly input.",
+  "description": "Play Sudoku puzzles in a clean, installable web app with touch and Apple Pencil friendly input. Different settings allows different styles of play. Hints permit a tutorial showing the techniques to solve a puzzle. Built for an iPad and usable in any browser",
   "repoUrl": "https://github.com/ShadowfootNZ/sudoku",
   "appUrl": "https://apps.shadowfoot.com/sudoku/",
   "deployDir": ".",
-  "entryPoint": "index.html"
+    "thumbnailPath": "docs/thumbnail.webp",
+  "keyImagePath": "docs/sudoku.webp",
+  "imagePaths": ["docs/sudoku-settings.webp", "docs/sudoku-help.webp", "docs/sudoku-tutorial.webp"],
+  "entryPoint": "index.html",
+  "tags": ["game"],
+  "status": "active"
 }
