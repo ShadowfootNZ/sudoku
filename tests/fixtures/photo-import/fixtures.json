@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "fixtures": [
+    { "file": "IMG_2627.PNG", "kind": "screenshot", "tier": "clean", "notes": ["full application chrome", "handwritten-style font", "grid is wide but not square in source"] },
+    { "file": "IMG_2627 cropped.png", "kind": "screenshot", "tier": "clean", "derivedFrom": "IMG_2627.PNG", "notes": ["manual crop", "handwritten-style font", "edge-detector reference"] },
+    { "file": "IMG_2632.jpg", "kind": "screenshot", "tier": "clean", "notes": ["tight crop", "near-square grid", "sans-serif font"] },
+    { "file": "sudoku300.jpg", "kind": "digital", "tier": "clean", "notes": ["low resolution", "tight crop", "high contrast"] },
+    { "file": "Sudoku_Puzzle_by_L2G-20050714_standardized_layout.svg.webp", "kind": "digital", "tier": "clean", "notes": ["tight crop", "high resolution", "classic reference puzzle"] },
+    { "file": "f0x7fj9azcf21.jpg", "kind": "photo", "tier": "medium", "notes": ["paper texture", "slight rotation", "close crop"] },
+    { "file": "y4f37ifec7aa1.jpg", "kind": "photo", "tier": "medium", "notes": ["paper texture", "perspective distortion", "close crop"] },
+    { "file": "images1.jpg", "kind": "photo", "tier": "medium", "notes": ["page context", "mild perspective", "low resolution"] },
+    { "file": "facebook.jpg", "kind": "photo", "tier": "hard", "notes": ["colored cells", "shadow", "perspective distortion", "low resolution"] },
+    { "file": "finders.jpg", "kind": "photo", "tier": "hard", "notes": ["large page context", "hand occlusion", "perspective distortion", "low resolution"] },
+    { "file": "images.jpg", "kind": "photo", "tier": "hard", "notes": ["overlaid social text", "page context", "perspective distortion", "low resolution"] },
+    { "file": "sudoku-game-newspaper-empty-french-184057310.webp", "kind": "photo", "tier": "hard", "notes": ["stock watermark", "blue digits", "strong rotation and perspective"] },
+    { "file": "Sudoku.jpg", "kind": "scan", "tier": "hard", "notes": ["historic newspaper page", "very small grid in source", "low contrast"] }
+  ]
+}
