@@ -43,6 +43,20 @@ The next comparison adapter should use a small 10-class ONNX CNN with the WASM-o
 Web build. Record runtime JavaScript/WASM bytes separately from model bytes, and report cold model
 load, warm batch inference, given-digit accuracy, exact grids, and confidence calibration.
 
+Before accepting the ONNX runtime overhead, the harness evaluates a browser-native two-layer MLP
+trained solely from synthetic Windows fonts. Its model is `models/sudoku-digits-mlp.json`; the
+reproducible trainer is `tools/train-digit-model.py` and requires only Pillow and NumPy. Version 1
+is 264,205 bytes uncompressed and reached 75.7% on held-out synthetic renderings. This is a model
+spike, not a production selection. The harness uses it when available and falls back to the
+leave-one-fixture-out template baseline if model loading fails.
+
+The first real-fixture MLP run scored 72/112 given digits (64.3%) across valid crops, versus
+18/112 (16.1%) for templates. It achieved 30/30 on the standardized reference and 27/30 on the
+handwritten-style crop, but only 7/25 on `IMG_2632.jpg` and 8/27 on `sudoku300.jpg`. One grid was
+exact. Load time was about 19ms and inference 1–2ms. Retain the candidate as a checkpoint, then
+improve input glyph normalization and synthetic font/weight/scale diversity before accepting or
+rejecting browser-native inference.
+
 ## Production delivery constraint
 
 OCR assets are optional network resources. The scanner entry module, runtime JavaScript/WASM,

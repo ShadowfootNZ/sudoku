@@ -1,6 +1,7 @@
 import { normalizeGrid, scorePrediction, summarize } from './photo-metrics.js';
 import { detectGrid, classifyBlank } from './grid-detector.js';
 import { recognizeLeaveOneOut } from './digit-recognizer.js';
+import { loadMlpRecognizer } from './mlp-recognizer.js';
 
 const imageInput = document.querySelector('#images');
 const truthInput = document.querySelector('#ground-truth');
@@ -51,7 +52,13 @@ runButton.addEventListener('click', async () => {
       results.push(result);
     }
   }
-  recognizeLeaveOneOut(results);
+  try {
+    const recognizer = await loadMlpRecognizer();
+    for (const result of results) applyMlp(result, recognizer);
+  } catch (error) {
+    console.warn('MLP model unavailable; using template baseline.', error);
+    recognizeLeaveOneOut(results);
+  }
   for (const result of results) {
     if (result.expected && result.predictedDigits) {
       result.occupancyMetrics = result.metrics;
@@ -202,4 +209,22 @@ function extractFeature(source) {
     feature[i] = (255 - luminance) / 255;
   }
   return feature;
+}
+
+function applyMlp(result, recognizer) {
+  if (!result.expected || !result._features) return;
+  const occupiedIndexes = result.predictedOccupancy
+    .map((occupied, index) => occupied ? index : -1).filter(index => index >= 0);
+  const output = recognizer.recognize(occupiedIndexes.map(index => result._features[index]));
+  const digits = new Array(81).fill(0);
+  const confidence = new Array(81).fill(1);
+  occupiedIndexes.forEach((cell, index) => {
+    digits[cell] = output.digits[index];
+    confidence[cell] = output.confidence[index];
+  });
+  result.predictedDigits = digits;
+  result.digitConfidence = confidence;
+  result.recognizer = 'synthetic-font-mlp-v1';
+  result.modelLoadMs = recognizer.loadMs;
+  result.recognitionMs = output.recognitionMs;
 }

@@ -35,6 +35,15 @@ comparison only if the same model cannot be exported or packaged cleanly. No run
 finally until measured bundle/model bytes, cold load, warm inference, and five-fixture accuracy
 are recorded.
 
+Browser-native MLP spike (2026-07-11): a reproducible Pillow/NumPy synthetic-font trainer produced
+a 264,205-byte JSON model (~112,805 bytes gzip) with no inference runtime/WASM. Combined evaluation
+reached 318/405 cells (78.5%) and one exact grid. On the four usable crops, given-digit accuracy
+rose from the template baseline's 18/112 (16.1%) to 72/112 (64.3%): standardized reference 30/30,
+handwritten-style crop 27/30, `IMG_2632.jpg` 7/25, and `sudoku300.jpg` 8/27. Model load was ~19ms
+and inference 1–2ms. Conclusion: preserve this as a successful size/architecture spike, but do not
+ship it—the strong font variance is unacceptable. Next improve glyph normalization/training diversity;
+only add ONNX runtime if a browser-native model cannot reach the accuracy target.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
