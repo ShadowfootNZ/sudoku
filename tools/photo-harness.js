@@ -1,5 +1,5 @@
 import { normalizeGrid, scorePrediction, summarize } from './photo-metrics.js';
-import { detectGrid, classifyBlank } from './grid-detector.js';
+import { detectGrid, classifyBlank, assessGridQuality } from './grid-detector.js';
 import { recognizeLeaveOneOut } from './digit-recognizer.js';
 import { loadMlpRecognizer, normalizeGlyph } from './mlp-recognizer.js';
 import { loadCnnRecognizer } from './cnn-recognizer.js';
@@ -120,6 +120,8 @@ async function evaluate(file) {
   const fallback = { method: 'centered-square-fallback', x: Math.floor((width - side) / 2),
     y: Math.floor((height - side) / 2), width: side, height: side, confidence: 0 };
   const boundary = detected || fallback;
+  const quality = assessGridQuality(boundary);
+  if (quality.level === 'reject') throw new Error(quality.message);
   const cells = [];
   const features = [];
   const blankPrediction = [];
@@ -146,7 +148,7 @@ async function evaluate(file) {
   const occupancyMetrics = expected ? scorePrediction(expectedOccupancy, predictedOccupancy) : null;
   const result = {
     filename: file.name, status: 'complete', source: { width, height },
-    boundary,
+    boundary, quality,
     decodeMs, totalMs: performance.now() - start, expected,
     // No recognizer is selected yet. Predictions intentionally remain absent rather than
     // reporting misleading OCR accuracy for a segmentation-only baseline.
@@ -173,7 +175,8 @@ function renderResult(result) {
     details.innerHTML = `<p>${result.source.width}×${result.source.height}; ${result.boundary.method}
       (${(result.boundary.confidence * 100).toFixed(0)}% confidence); decoded in
       ${result.decodeMs.toFixed(1)} ms; total ${result.totalMs.toFixed(1)} ms.
-      ${result.recognizer ? `Digit accuracy ${(result.metrics.cellAccuracy * 100).toFixed(1)}%.` : ''}</p>`;
+      ${result.recognizer ? `Digit accuracy ${(result.metrics.cellAccuracy * 100).toFixed(1)}%.` : ''}
+      ${result.quality.message}</p>`;
     const grid = document.createElement('div');
     grid.className = 'cells';
     result.cellUrls.forEach((url, index) => {

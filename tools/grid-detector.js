@@ -130,3 +130,12 @@ export function classifyBlank(imageData) {
   const inkRatio = ink / samples;
   return { blank: inkRatio < 0.025, inkRatio };
 }
+
+export function assessGridQuality(boundary) {
+  const pixelsPerCell = Math.min(boundary.width, boundary.height) / 9;
+  if (pixelsPerCell < 30) return { level: 'reject', pixelsPerCell,
+    message: 'This image is too small or unclear to read reliably. Try a closer, sharper photo.' };
+  if (pixelsPerCell < 50) return { level: 'warning', pixelsPerCell,
+    message: 'This image may be difficult to read. Review every detected digit carefully.' };
+  return { level: 'adequate', pixelsPerCell, message: '' };
+}

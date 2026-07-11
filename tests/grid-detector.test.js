@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { clusterPeaks, findRegularRun, classifyBlank, detectGrid } from '../tools/grid-detector.js';
+import { clusterPeaks, findRegularRun, classifyBlank, detectGrid, assessGridQuality } from '../tools/grid-detector.js';
 
 assert.deepEqual(clusterPeaks([0, 4, 8, 3, 0, 7, 7, 0], 4), [2, 6]);
 assert.deepEqual(clusterPeaks([9, 9, 9, 0, 0, 8, 8], 5), [1, 6]);
@@ -31,5 +31,8 @@ for (let n = 0; n < 10; n++) {
 const paleResult = detectGrid({ width: size, height: size, data: pale });
 assert.ok(paleResult);
 assert.equal(paleResult.method, 'axis-aligned-grid-edges');
+assert.equal(assessGridQuality({ width: 269, height: 300 }).level, 'reject');
+assert.equal(assessGridQuality({ width: 270, height: 300 }).level, 'warning');
+assert.equal(assessGridQuality({ width: 450, height: 500 }).level, 'adequate');
 
 console.log('ok - grid detector helpers');

@@ -93,6 +93,13 @@ OCR accuracy work is now input-limited: acquire more independently sourced print
 fixtures and ground truth before model tuning. Do not train a production model on evaluation
 fixtures; maintain fixture-level separation between training and final evaluation sets.
 
+Image-quality policy: use rectified grid resolution, not source file size. Reject below 30 pixels
+per cell (<270px on the shorter grid side) with “This image is too small or unclear to read
+reliably. Try a closer, sharper photo.” Warn from 30–49px/cell and require careful review; 50+
+pixels/cell is adequate subject to detection/focus. The harness enforces these initial thresholds;
+tune later from device photos. Ambiguous/internally inconsistent fixtures are stress tests, never
+silently corrected or used as labeled training data.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

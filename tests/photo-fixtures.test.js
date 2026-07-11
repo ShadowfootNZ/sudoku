@@ -9,7 +9,7 @@ const truth = JSON.parse(readFileSync(new URL('ground-truth.json', root), 'utf8'
 const files = new Set(readdirSync(root));
 
 assert.equal(manifest.version, 1);
-assert.equal(manifest.fixtures.length, 13);
+assert.equal(manifest.fixtures.length, 17);
 for (const fixture of manifest.fixtures) {
   assert.ok(files.has(fixture.file), `missing fixture: ${fixture.file}`);
   assert.ok(['clean', 'medium', 'hard'].includes(fixture.tier), `bad tier: ${fixture.file}`);
