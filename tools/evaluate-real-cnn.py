@@ -26,17 +26,22 @@ def train_model(x, y):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("cells", type=Path)
+    parser.add_argument("cells", type=Path, nargs="+")
     args = parser.parse_args()
-    data = json.loads(args.cells.read_text(encoding="utf-8"))
+    merged = {}
+    for path in args.cells:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for sample in data["samples"]:
+            merged[(sample["fixture"], sample["cell"])] = sample
+    samples = list(merged.values())
     rng = random.Random(seed)
     synthetic = [(render(d, rng), d - 1) for d in range(1, 10) for _ in range(420)]
     sx = np.stack([x for x, _ in synthetic]); sy = np.array([y for _, y in synthetic])
-    fixtures = sorted({sample["fixture"] for sample in data["samples"]})
+    fixtures = sorted({sample["fixture"] for sample in samples})
     results = []
     for held_out in fixtures:
-        training = [s for s in data["samples"] if s["fixture"] != held_out]
-        testing = [s for s in data["samples"] if s["fixture"] == held_out]
+        training = [s for s in samples if s["fixture"] != held_out]
+        testing = [s for s in samples if s["fixture"] == held_out]
         # Repeat the small real set so it materially influences training without using holdout data.
         rx = np.stack([s["feature"] for s in training] * 12).astype(np.float32)
         ry = np.array([s["digit"] - 1 for s in training] * 12)

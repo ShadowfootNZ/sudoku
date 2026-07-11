@@ -162,3 +162,12 @@ Run the reproducible grouped check with:
 ```powershell
 .\.venv-ocr\Scripts\python.exe tools\evaluate-real-cnn.py tests\photo-labeled-cells.json
 ```
+
+The command accepts multiple exports and de-duplicates them by fixture name and cell index. This
+allows corrected fixtures to be combined with earlier exports without hand-editing generated JSON.
+
+The merged six-fixture run contained 165 unique labeled digits and scored 108/165 (65.5%) under
+leave-one-fixture-out validation. The original four evaluation fixtures regressed to 79/112.
+Additional cells from two print styles did not improve unseen-style accuracy. Further tuning on
+this corpus is stopped to avoid overfitting; a broader independent dataset/model is required for
+high-confidence automatic entry.

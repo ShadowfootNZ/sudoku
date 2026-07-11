@@ -124,6 +124,14 @@ report/labeled export. On `y4... cropped`, manual correction improved occupancy 
 at ~100px/cell; total processing was 239ms. OCR remained 7/25, confirming the crop is now valid and
 the font/style is useful training data. Perspective checkpoint accepted.
 
+Six-fixture grouped validation (2026-07-12): merging multiple labeled exports produced 165 unique
+cells across six styles. Leave-one-fixture-out accuracy was 108/165 (65.5%). On the original four
+held-out fixtures it regressed to 79/112, versus 80/112 and 81/112 in earlier runs. Results:
+handwritten 27/30, `IMG_2632` 12/25, reference 30/30, low-resolution 10/27; new print styles were
+19/28 and 10/25. Stop tuning this synthetic/small-corpus CNN—the evidence shows style overfitting,
+not a data-volume trend. Phase 0 now requires a product decision: ship an explicitly review-heavy
+OCR assist, or acquire/license a substantially broader digit dataset/model before Phase 1.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
