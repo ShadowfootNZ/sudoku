@@ -214,7 +214,10 @@ function stripUrls(result) {
 function buildLabeledCells(results) {
   const samples = [];
   for (const result of results) {
-    if (!result.expected || !result._features || result.boundary.method.includes('fallback')) continue;
+    if (!result.expected || !result._features) continue;
+    const trustedSegmentation = !result.boundary.method.includes('fallback') ||
+      result.occupancyMetrics?.exactGrid === true;
+    if (!trustedSegmentation) continue;
     result.expected.forEach((digit, cell) => {
       if (digit) samples.push({ fixture: result.filename, cell, digit, feature: result._features[cell] });
     });

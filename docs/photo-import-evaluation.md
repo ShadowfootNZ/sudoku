@@ -97,6 +97,8 @@ Use **Export labeled cells** after a combined run to create `photo-labeled-cells
 normalized 16×16 features and ground-truth digits from successfully detected (non-fallback)
 fixtures, grouped by filename for leave-one-fixture-out validation. It contains no source image,
 but remains generated local test data and is ignored by Git.
+Fallback crops are included only when their blank/nonblank occupancy matches ground truth exactly;
+this retains correctly segmented `IMG_2632.jpg` while excluding the failed full-screen crop.
 
 ## Production delivery constraint
 
