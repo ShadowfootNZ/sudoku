@@ -8,7 +8,10 @@
 # Generated benchmark reports; material results are summarized in the plan/docs.
 /tests/photo-evaluation*.json
 /tests/photo-labeled-cells*.json
+/tests/real-cnn-crossval*.json
 
 # Temporary local OCR training/export environment (not an app dependency).
 /.venv-ocr/
 /.onnx-spike/
+__pycache__/
+*.pyc

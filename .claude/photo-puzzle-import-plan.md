@@ -84,6 +84,15 @@ now exports labeled normalized cells, grouped by fixture, so the next training c
 representative raster data with leave-one-fixture-out validation rather than more blind synthetic
 augmentation.
 
+Representative-cell cross-validation (2026-07-11): exported 112 labeled normalized cells from
+four correctly segmented fixtures. Training four independent CNNs on synthetic data plus the
+other three fixtures (never the held-out fixture) reached 80/112 (71.4%), only +2 over the
+synthetic-only CNN. Results: handwritten crop 29/30, reference 30/30, `IMG_2632` 13/25, and
+`sudoku300` 8/27. The small correlated corpus does not solve unseen-style generalization. Phase 0
+OCR accuracy work is now input-limited: acquire more independently sourced print/screenshot/photo
+fixtures and ground truth before model tuning. Do not train a production model on evaluation
+fixtures; maintain fixture-level separation between training and final evaluation sets.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

@@ -130,3 +130,17 @@ representative test asset.
 The eventual comparison report must include grid-detection success, per-cell accuracy, exact-grid
 accuracy, blank accuracy, digit accuracy, decode time, total processing time, model/runtime bytes,
 and failure category. The targets in `.claude/photo-puzzle-import-plan.md` remain the release gates.
+
+## Representative-cell cross-validation
+
+The first fixture-grouped experiment used 112 cells from four fixtures. Each fold trained on
+synthetic digits plus three real fixtures and evaluated only on the fourth. It scored 80/112
+(71.4%): 29/30 handwritten crop, 30/30 reference, 13/25 `IMG_2632`, and 8/27 `sudoku300`. This
+small corpus improved the synthetic-only CNN by just two digits. More independent styles are
+required; do not optimize repeatedly against these same four evaluation images.
+
+Run the reproducible grouped check with:
+
+```powershell
+.\.venv-ocr\Scripts\python.exe tools\evaluate-real-cnn.py tests\photo-labeled-cells.json
+```
