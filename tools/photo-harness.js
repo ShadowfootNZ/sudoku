@@ -3,6 +3,7 @@ import { detectGrid, classifyBlank, assessGridQuality } from './grid-detector.js
 import { recognizeLeaveOneOut } from './digit-recognizer.js';
 import { loadMlpRecognizer, normalizeGlyph } from './mlp-recognizer.js';
 import { loadCnnRecognizer } from './cnn-recognizer.js';
+import { warpPerspective } from './perspective.js';
 
 const imageInput = document.querySelector('#images');
 const truthInput = document.querySelector('#ground-truth');
@@ -12,9 +13,15 @@ const exportCellsButton = document.querySelector('#export-cells');
 const status = document.querySelector('#status');
 const summary = document.querySelector('#summary');
 const resultsRoot = document.querySelector('#results');
+const cornerDialog = document.querySelector('#corner-dialog');
+const cornerCanvas = document.querySelector('#corner-canvas');
 let truth = {};
 let report = null;
 let labeledCells = null;
+let currentResults = [];
+let currentRecognizer = null;
+let currentRecognizerName = null;
+let cornerState = null;
 
 fetch('../tests/fixtures/photo-import/ground-truth.json')
   .then(response => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
@@ -58,25 +65,25 @@ runButton.addEventListener('click', async () => {
   }
   try {
     const recognizer = await loadCnnRecognizer();
+    currentRecognizer = recognizer;
+    currentRecognizerName = `synthetic-font-cnn-js-v${recognizer.model.version}`;
     for (const result of results) applyModel(result, recognizer);
   } catch (error) {
     console.warn('CNN model unavailable; trying MLP.', error);
     try {
       const recognizer = await loadMlpRecognizer();
+      currentRecognizer = recognizer;
+      currentRecognizerName = `synthetic-font-mlp-v${recognizer.model.version}`;
       for (const result of results) applyModel(result, recognizer, `synthetic-font-mlp-v${recognizer.model.version}`);
     } catch {
       recognizeLeaveOneOut(results);
     }
   }
   for (const result of results) {
-    if (result.expected && result.predictedDigits) {
-      result.occupancyMetrics = result.metrics;
-      result.metrics = scorePrediction(result.expected, result.predictedDigits);
-      result.metricType = 'digits';
-      result.totalMs += result.recognitionMs;
-    }
+    finalizeResult(result);
     renderResult(result);
   }
+  currentResults = results;
   const totals = summarize(results);
   report = { version: 1, createdAt: new Date().toISOString(), totals, results: results.map(stripUrls) };
   labeledCells = buildLabeledCells(results);
@@ -99,7 +106,7 @@ exportCellsButton.addEventListener('click', () => {
   if (labeledCells) downloadJson(labeledCells, 'photo-labeled-cells.json');
 });
 
-async function evaluate(file) {
+async function evaluate(file, manualCorners = null) {
   const start = performance.now();
   const decodeStart = performance.now();
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
@@ -114,12 +121,20 @@ async function evaluate(file) {
   canvas.getContext('2d', { alpha: false }).drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  const pixels = canvas.getContext('2d').getImageData(0, 0, width, height);
-  const detected = detectGrid(pixels);
+  const originalUrl = canvas.toDataURL('image/webp', 0.9);
+  let pixels = canvas.getContext('2d').getImageData(0, 0, width, height);
+  let detected = detectGrid(pixels);
   const side = Math.min(width, height);
   const fallback = { method: 'centered-square-fallback', x: Math.floor((width - side) / 2),
     y: Math.floor((height - side) / 2), width: side, height: side, confidence: 0 };
-  const boundary = detected || fallback;
+  let boundary = detected || fallback;
+  if (manualCorners) {
+    const warped = warpPerspective(pixels, manualCorners, 900);
+    canvas.width = canvas.height = 900;
+    canvas.getContext('2d', { alpha: false }).putImageData(warped, 0, 0);
+    pixels = warped;
+    boundary = { method: 'manual-perspective', x: 0, y: 0, width: 899, height: 899, confidence: 1 };
+  }
   const quality = assessGridQuality(boundary);
   if (quality.level === 'reject') throw new Error(quality.message);
   const cells = [];
@@ -155,6 +170,8 @@ async function evaluate(file) {
     metrics: occupancyMetrics, metricType: 'occupancy', predictedOccupancy,
     inkRatios: blankPrediction.map(item => item.inkRatio),
     previewUrl: canvas.toDataURL('image/webp', 0.85), cellUrls: cells, _features: features,
+    _file: file, _sourcePreviewUrl: originalUrl,
+    _initialCorners: boundaryToCorners(detected || fallback),
   };
   return result;
 }
@@ -193,6 +210,10 @@ function renderResult(result) {
       grid.append(cell);
     });
     details.append(grid);
+    const adjust = document.createElement('button');
+    adjust.type = 'button'; adjust.className = 'adjust-corners'; adjust.textContent = 'Adjust corners';
+    adjust.addEventListener('click', () => openCornerEditor(result));
+    details.append(adjust);
     visual.append(details);
     article.append(visual);
   }
@@ -210,8 +231,22 @@ function renderSummary(totals) {
 }
 
 function stripUrls(result) {
-  const { previewUrl, cellUrls, _features, ...serializable } = result;
+  const { previewUrl, cellUrls, _features, _file, _sourcePreviewUrl, _initialCorners, ...serializable } = result;
   return serializable;
+}
+
+function finalizeResult(result) {
+  if (result.expected && result.predictedDigits) {
+    result.occupancyMetrics = result.metrics;
+    result.metrics = scorePrediction(result.expected, result.predictedDigits);
+    result.metricType = 'digits';
+    result.totalMs += result.recognitionMs;
+  }
+}
+
+function boundaryToCorners(boundary) {
+  return [{x:boundary.x,y:boundary.y}, {x:boundary.x+boundary.width,y:boundary.y},
+    {x:boundary.x+boundary.width,y:boundary.y+boundary.height}, {x:boundary.x,y:boundary.y+boundary.height}];
 }
 
 function buildLabeledCells(results) {
@@ -269,3 +304,92 @@ function applyModel(result, recognizer, name = `synthetic-font-cnn-js-v${recogni
   result.modelLoadMs = recognizer.loadMs;
   result.recognitionMs = output.recognitionMs;
 }
+
+function openCornerEditor(result) {
+  const image = new Image();
+  image.onload = () => {
+    cornerCanvas.width = result.source.width;
+    cornerCanvas.height = result.source.height;
+    cornerState = { result, image, corners: result._initialCorners.map(point => ({...point})), active: -1 };
+    drawCornerEditor();
+    cornerDialog.showModal();
+  };
+  image.src = result._sourcePreviewUrl;
+}
+
+function drawCornerEditor() {
+  const { image, corners } = cornerState;
+  const context = cornerCanvas.getContext('2d');
+  context.drawImage(image, 0, 0, cornerCanvas.width, cornerCanvas.height);
+  context.strokeStyle = '#00e5ff'; context.lineWidth = Math.max(3, cornerCanvas.width / 300);
+  context.fillStyle = '#ff3b30';
+  context.beginPath();
+  corners.forEach((point, index) => index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y));
+  context.closePath(); context.stroke();
+  const radius = Math.max(12, cornerCanvas.width / 65);
+  corners.forEach((point, index) => {
+    context.beginPath(); context.arc(point.x, point.y, radius, 0, Math.PI * 2); context.fill();
+    context.fillStyle = 'white'; context.font = `${radius}px system-ui`; context.textAlign = 'center';
+    context.textBaseline = 'middle'; context.fillText(String(index + 1), point.x, point.y);
+    context.fillStyle = '#ff3b30';
+  });
+}
+
+function canvasPoint(event) {
+  const rect = cornerCanvas.getBoundingClientRect();
+  return { x: (event.clientX - rect.left) * cornerCanvas.width / rect.width,
+    y: (event.clientY - rect.top) * cornerCanvas.height / rect.height };
+}
+
+cornerCanvas.addEventListener('pointerdown', event => {
+  if (!cornerState) return;
+  const point = canvasPoint(event);
+  let nearest = 0;
+  for (let i = 1; i < 4; i++) {
+    const distance = p => Math.hypot(p.x - point.x, p.y - point.y);
+    if (distance(cornerState.corners[i]) < distance(cornerState.corners[nearest])) nearest = i;
+  }
+  cornerState.active = nearest;
+  cornerCanvas.setPointerCapture?.(event.pointerId);
+});
+
+cornerCanvas.addEventListener('pointermove', event => {
+  if (!cornerState || cornerState.active < 0) return;
+  const point = canvasPoint(event);
+  cornerState.corners[cornerState.active] = {
+    x: Math.max(0, Math.min(cornerCanvas.width - 1, point.x)),
+    y: Math.max(0, Math.min(cornerCanvas.height - 1, point.y)),
+  };
+  drawCornerEditor();
+});
+
+cornerCanvas.addEventListener('pointerup', () => { if (cornerState) cornerState.active = -1; });
+cornerCanvas.addEventListener('pointercancel', () => { if (cornerState) cornerState.active = -1; });
+document.querySelector('#corner-cancel').addEventListener('click', () => cornerDialog.close());
+document.querySelector('#corner-reset').addEventListener('click', () => {
+  cornerState.corners = cornerState.result._initialCorners.map(point => ({...point}));
+  drawCornerEditor();
+});
+document.querySelector('#corner-apply').addEventListener('click', async () => {
+  const state = cornerState;
+  cornerDialog.close();
+  status.textContent = `Rectifying ${state.result.filename}…`;
+  try {
+    const replacement = await evaluate(state.result._file, state.corners);
+    if (currentRecognizer) applyModel(replacement, currentRecognizer, currentRecognizerName);
+    finalizeResult(replacement);
+    const index = currentResults.indexOf(state.result);
+    currentResults[index] = replacement;
+    resultsRoot.replaceChildren();
+    currentResults.forEach(renderResult);
+    const totals = summarize(currentResults);
+    report = { version: 1, createdAt: new Date().toISOString(), totals,
+      results: currentResults.map(stripUrls) };
+    labeledCells = buildLabeledCells(currentResults);
+    renderSummary(totals);
+    exportCellsButton.disabled = labeledCells.samples.length === 0;
+    status.textContent = `${replacement.filename} rectified and rescanned.`;
+  } catch (error) {
+    status.textContent = `Rectification failed: ${error.message}`;
+  }
+});

@@ -118,6 +118,12 @@ with corner-mapping, identity, and degenerate-selection tests. Next wire it to a
 corner overlay in the harness; default corners come from automatic detection and manual adjustment
 must be available whenever detection/fallback segmentation is wrong.
 
+Interactive perspective result (2026-07-12): harness now provides a modal four-handle editor with
+mouse/touch/Pencil pointer input, reset/cancel, in-place 900×900 rectification, rescan, and refreshed
+report/labeled export. On `y4... cropped`, manual correction improved occupancy from 60/81 to 81/81
+at ~100px/cell; total processing was 239ms. OCR remained 7/25, confirming the crop is now valid and
+the font/style is useful training data. Perspective checkpoint accepted.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

@@ -147,6 +147,11 @@ at 96/140 overall. Accuracy on the original four held-out fixtures improved only
 Do not use a crop for training merely because its total resolution is high; cell mapping must also
 match ground truth exactly.
 
+The interactive four-corner editor rectified `y4... cropped` from 60/81 to 81/81 occupancy. It
+warps to 900×900, reruns the full pipeline in place, and refreshes exports. OCR scored 7/25 in
+239ms total, so this is now a valid difficult-style training fixture rather than a segmentation
+failure. Corners are ordered top-left, top-right, bottom-right, bottom-left.
+
 `facebook cropped.jpg` is a deliberate low-quality failure fixture: 40.4px/cell, edge-detector
 confidence 83.1%, but only 49/81 occupancy and 6/41 visible digits recognized. It must not enter
 training. This demonstrates that pixel resolution and detector confidence are necessary but not

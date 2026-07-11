@@ -27,6 +27,16 @@
     <section id="summary" class="panel" hidden></section>
     <section id="results" aria-label="Image results"></section>
   </main>
+  <dialog id="corner-dialog">
+    <h2>Adjust grid corners</h2>
+    <p>Drag each handle to the outside corner of the Sudoku grid.</p>
+    <canvas id="corner-canvas" aria-label="Puzzle image with adjustable grid corners"></canvas>
+    <div class="dialog-actions">
+      <button id="corner-reset" type="button">Reset</button>
+      <button id="corner-cancel" type="button">Cancel</button>
+      <button id="corner-apply" type="button">Rectify and rescan</button>
+    </div>
+  </dialog>
   <script type="module" src="photo-harness.js"></script>
 </body>
 </html>
