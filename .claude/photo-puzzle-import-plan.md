@@ -77,6 +77,13 @@ CNN checkpoint, but accuracy remains below release quality. The next highest-val
 representative real/print-style training samples or improving low-resolution preprocessing—not a
 larger runtime. Continue to surface uncertainty and require review in the product design.
 
+Confidence audit: CNN softmax is severely overconfident; a ≥95% threshold retained 75.9% coverage
+but only 81.2% precision, with several incorrect digits above 99.9%. Initial product policy must
+mark every OCR clue as review-required. Confidence can sort review order only. The Phase 0 harness
+now exports labeled normalized cells, grouped by fixture, so the next training comparison can use
+representative raster data with leave-one-fixture-out validation rather than more blind synthetic
+augmentation.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

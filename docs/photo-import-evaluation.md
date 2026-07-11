@@ -88,6 +88,16 @@ reference, 13/25 on `IMG_2632`, and 6/27 on low-resolution `sudoku300`. Model lo
 per-grid inference 34–43ms, and median end-to-end processing 114ms. This justifies preserving the
 compact CNN path, but not shipping it: low-resolution/font generalization remains inadequate.
 
+CNN softmax confidence is currently overconfident: on the first fixture run, accepting only
+predictions at or above 95% confidence still produced just 81.2% precision, including multiple
+errors above 99.9%. Until calibration improves, mark every imported clue for review; confidence
+may prioritize review order but must not imply correctness.
+
+Use **Export labeled cells** after a combined run to create `photo-labeled-cells.json`. It contains
+normalized 16×16 features and ground-truth digits from successfully detected (non-fallback)
+fixtures, grouped by filename for leave-one-fixture-out validation. It contains no source image,
+but remains generated local test data and is ignored by Git.
+
 ## Production delivery constraint
 
 OCR assets are optional network resources. The scanner entry module, runtime JavaScript/WASM,

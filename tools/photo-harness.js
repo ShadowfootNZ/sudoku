@@ -8,11 +8,13 @@ const imageInput = document.querySelector('#images');
 const truthInput = document.querySelector('#ground-truth');
 const runButton = document.querySelector('#run');
 const exportButton = document.querySelector('#export');
+const exportCellsButton = document.querySelector('#export-cells');
 const status = document.querySelector('#status');
 const summary = document.querySelector('#summary');
 const resultsRoot = document.querySelector('#results');
 let truth = {};
 let report = null;
+let labeledCells = null;
 
 fetch('../tests/fixtures/photo-import/ground-truth.json')
   .then(response => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
@@ -41,6 +43,7 @@ truthInput.addEventListener('change', async () => {
 runButton.addEventListener('click', async () => {
   runButton.disabled = true;
   exportButton.disabled = true;
+  exportCellsButton.disabled = true;
   resultsRoot.replaceChildren();
   const results = [];
   for (const [index, file] of [...imageInput.files].entries()) {
@@ -76,10 +79,12 @@ runButton.addEventListener('click', async () => {
   }
   const totals = summarize(results);
   report = { version: 1, createdAt: new Date().toISOString(), totals, results: results.map(stripUrls) };
+  labeledCells = buildLabeledCells(results);
   renderSummary(totals);
   status.textContent = `Evaluation complete: ${totals.completed}/${totals.images} images processed.`;
   runButton.disabled = false;
   exportButton.disabled = false;
+  exportCellsButton.disabled = labeledCells.samples.length === 0;
 });
 
 exportButton.addEventListener('click', () => {
@@ -88,6 +93,10 @@ exportButton.addEventListener('click', () => {
   const link = Object.assign(document.createElement('a'), { href: url, download: 'photo-evaluation.json' });
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
+});
+
+exportCellsButton.addEventListener('click', () => {
+  if (labeledCells) downloadJson(labeledCells, 'photo-labeled-cells.json');
 });
 
 async function evaluate(file) {
@@ -200,6 +209,25 @@ function renderSummary(totals) {
 function stripUrls(result) {
   const { previewUrl, cellUrls, _features, ...serializable } = result;
   return serializable;
+}
+
+function buildLabeledCells(results) {
+  const samples = [];
+  for (const result of results) {
+    if (!result.expected || !result._features || result.boundary.method.includes('fallback')) continue;
+    result.expected.forEach((digit, cell) => {
+      if (digit) samples.push({ fixture: result.filename, cell, digit, feature: result._features[cell] });
+    });
+  }
+  return { version: 1, normalization: 'bbox-12x14-v1', width: 16, height: 16,
+    createdAt: new Date().toISOString(), samples };
+}
+
+function downloadJson(value, filename) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value)], { type: 'application/json' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function extractFeature(source) {

@@ -7,6 +7,7 @@
 
 # Generated benchmark reports; material results are summarized in the plan/docs.
 /tests/photo-evaluation*.json
+/tests/photo-labeled-cells*.json
 
 # Temporary local OCR training/export environment (not an app dependency).
 /.venv-ocr/
