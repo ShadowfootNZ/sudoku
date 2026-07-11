@@ -113,6 +113,11 @@ Fixed labeled export to require exact ground-truth occupancy for every fixture, 
 detections. Resolution/confidence alone cannot guarantee cell mapping; production always needs
 editable review and a clear “try another photo” route.
 
+Perspective checkpoint: added a dependency-free inverse homography solver and raster warp engine,
+with corner-mapping, identity, and degenerate-selection tests. Next wire it to a draggable four-
+corner overlay in the harness; default corners come from automatic detection and manual adjustment
+must be available whenever detection/fallback segmentation is wrong.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
