@@ -171,3 +171,9 @@ leave-one-fixture-out validation. The original four evaluation fixtures regresse
 Additional cells from two print styles did not improve unseen-style accuracy. Further tuning on
 this corpus is stopped to avoid overfitting; a broader independent dataset/model is required for
 high-confidence automatic entry.
+
+The 25-image full-folder audit correctly rejected five sub-threshold images and processed twenty.
+Of eight then-scored fixtures, five had exact occupancy and contributed 138 labeled digits. This
+is expected behavior: cropped and uncropped derivatives are diagnostic cases, not independent
+training samples. Three newly transcribed, solver-validated rectified sources add book serif,
+clean serif, and low-contrast paper styles; ambiguous/watermarked grids remain stress-only.

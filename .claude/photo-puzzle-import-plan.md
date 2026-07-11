@@ -132,6 +132,14 @@ handwritten 27/30, `IMG_2632` 12/25, reference 30/30, low-resolution 10/27; new 
 not a data-volume trend. Phase 0 now requires a product decision: ship an explicitly review-heavy
 OCR assist, or acquire/license a substantially broader digit dataset/model before Phase 1.
 
+Full-folder audit (2026-07-12): 25 images exercised cropped/uncropped, corrected, low-resolution,
+and unknown-ground-truth paths. Five were correctly rejected below the 30px/cell floor. Twenty
+processed; eight had ground truth and only five achieved exact occupancy for labeled export (138
+digits). Low-quality Facebook remained 52/81 even after manual correction and stayed excluded.
+Three additional visually unambiguous rectified sources (`7c223...`, `1346524.jpg`, and
+`skyscraper.webp`) now have solver-validated ground truth; other ambiguous/watermarked sources
+remain stress-only. Next export labeled cells from these three without changing the held-out set.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

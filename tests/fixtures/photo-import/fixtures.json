@@ -1,6 +1,9 @@
 {
   "version": 1,
   "fixtures": [
+    { "file": "7c223be9bb3d4e17ae661892c8b8339d.jpg", "kind": "photo", "tier": "medium", "role": "training", "notes": ["manual perspective correction required", "book print"] },
+    { "file": "1346524.jpg", "kind": "digital", "tier": "medium", "role": "training", "notes": ["manual perspective correction used", "clean serif print"] },
+    { "file": "skyscraper.webp", "kind": "photo", "tier": "hard", "role": "training", "notes": ["manual perspective correction required", "low contrast paper"] },
     { "file": "IMG_2627.PNG", "kind": "screenshot", "tier": "clean", "notes": ["full application chrome", "handwritten-style font", "grid is wide but not square in source"] },
     { "file": "IMG_2627 cropped.png", "kind": "screenshot", "tier": "clean", "derivedFrom": "IMG_2627.PNG", "notes": ["manual crop", "handwritten-style font", "edge-detector reference"] },
     { "file": "IMG_2632.jpg", "kind": "screenshot", "tier": "clean", "notes": ["tight crop", "near-square grid", "sans-serif font"] },
