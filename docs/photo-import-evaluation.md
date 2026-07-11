@@ -139,6 +139,12 @@ synthetic digits plus three real fixtures and evaluated only on the fourth. It s
 small corpus improved the synthetic-only CNN by just two digits. More independent styles are
 required; do not optimize repeatedly against these same four evaluation images.
 
+Adding 28 labeled bold paper-print digits from `f0x7... cropped` produced a 140-cell grouped run
+at 96/140 overall. Accuracy on the original four held-out fixtures improved only from 80/112 to
+81/112. `y4... cropped` was correctly excluded because occupancy segmentation reached only 60/81.
+Do not use a crop for training merely because its total resolution is high; cell mapping must also
+match ground truth exactly.
+
 Run the reproducible grouped check with:
 
 ```powershell

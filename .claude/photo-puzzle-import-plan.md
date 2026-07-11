@@ -100,6 +100,13 @@ pixels/cell is adequate subject to detection/focus. The harness enforces these i
 tune later from device photos. Ambiguous/internally inconsistent fixtures are stress tests, never
 silently corrected or used as labeled training data.
 
+Expanded-cell run (2026-07-11): `f0x7... cropped` passed detection/occupancy 81/81 and added 28
+bold paper-print digits. `y4... cropped` failed segmentation at 60/81 and was excluded. The
+expanded 140-cell grouped validation scored 96/140 overall; on the original four held-out fixtures
+it moved only 80/112→81/112 (handwritten 30/30, reference 30/30, `IMG_2632` 12/25, `sudoku300`
+9/27). One additional style is insufficient. Obtain/process `facebook cropped` plus a corrected
+crop/rectification for `y4...` before retraining again.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
