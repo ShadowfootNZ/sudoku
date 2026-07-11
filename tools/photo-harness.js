@@ -1,7 +1,8 @@
 import { normalizeGrid, scorePrediction, summarize } from './photo-metrics.js';
 import { detectGrid, classifyBlank } from './grid-detector.js';
 import { recognizeLeaveOneOut } from './digit-recognizer.js';
-import { loadMlpRecognizer } from './mlp-recognizer.js';
+import { loadMlpRecognizer, normalizeGlyph } from './mlp-recognizer.js';
+import { loadCnnRecognizer } from './cnn-recognizer.js';
 
 const imageInput = document.querySelector('#images');
 const truthInput = document.querySelector('#ground-truth');
@@ -53,11 +54,16 @@ runButton.addEventListener('click', async () => {
     }
   }
   try {
-    const recognizer = await loadMlpRecognizer();
-    for (const result of results) applyMlp(result, recognizer);
+    const recognizer = await loadCnnRecognizer();
+    for (const result of results) applyModel(result, recognizer);
   } catch (error) {
-    console.warn('MLP model unavailable; using template baseline.', error);
-    recognizeLeaveOneOut(results);
+    console.warn('CNN model unavailable; trying MLP.', error);
+    try {
+      const recognizer = await loadMlpRecognizer();
+      for (const result of results) applyModel(result, recognizer, `synthetic-font-mlp-v${recognizer.model.version}`);
+    } catch {
+      recognizeLeaveOneOut(results);
+    }
   }
   for (const result of results) {
     if (result.expected && result.predictedDigits) {
@@ -208,10 +214,10 @@ function extractFeature(source) {
     const luminance = pixels[p] * .299 + pixels[p + 1] * .587 + pixels[p + 2] * .114;
     feature[i] = (255 - luminance) / 255;
   }
-  return feature;
+  return normalizeGlyph(feature);
 }
 
-function applyMlp(result, recognizer) {
+function applyModel(result, recognizer, name = `synthetic-font-cnn-js-v${recognizer.model.version}`) {
   if (!result.expected || !result._features) return;
   const occupiedIndexes = result.predictedOccupancy
     .map((occupied, index) => occupied ? index : -1).filter(index => index >= 0);
@@ -224,7 +230,7 @@ function applyMlp(result, recognizer) {
   });
   result.predictedDigits = digits;
   result.digitConfidence = confidence;
-  result.recognizer = 'synthetic-font-mlp-v1';
+  result.recognizer = name;
   result.modelLoadMs = recognizer.loadMs;
   result.recognitionMs = output.recognitionMs;
 }

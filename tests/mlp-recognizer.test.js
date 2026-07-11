@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { infer } from '../tools/mlp-recognizer.js';
+import { infer, normalizeGlyph } from '../tools/mlp-recognizer.js';
 
 const model = JSON.parse(readFileSync(new URL('../models/sudoku-digits-mlp.json', import.meta.url)));
 assert.deepEqual(model.input, [1, 16, 16]);
@@ -12,5 +12,13 @@ const output = infer(model, [new Array(256).fill(0)]);
 assert.equal(output.digits.length, 1);
 assert.ok(output.digits[0] >= 1 && output.digits[0] <= 9);
 assert.ok(output.confidence[0] > 0 && output.confidence[0] <= 1);
+
+const shifted = new Array(256).fill(0);
+shifted[1 * 16 + 1] = 1;
+shifted[2 * 16 + 1] = 1;
+const normalized = normalizeGlyph(shifted);
+assert.equal(normalized.length, 256);
+assert.ok(normalized.some(value => value === 1));
+assert.equal(normalizeGlyph(new Array(256).fill(0)).every(value => value === 0), true);
 
 console.log('ok - browser-native MLP model contract');

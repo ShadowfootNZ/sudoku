@@ -57,6 +57,37 @@ exact. Load time was about 19ms and inference 1–2ms. Retain the candidate as a
 improve input glyph normalization and synthetic font/weight/scale diversity before accepting or
 rejecting browser-native inference.
 
+Version 2 applies the same ink bounding-box normalization in training and the browser: crop the
+glyph at a 10% ink threshold, scale proportionally into 12×14, and center it in 16×16. Synthetic
+held-out accuracy increased from 75.7% to 99.5%. The model remains 264,033 bytes raw and about
+112,840 bytes gzip. Real-fixture evaluation is required; synthetic accuracy is not an acceptance
+metric.
+
+The v2 real-fixture run remained 72/112 given digits (64.3%), exactly equal to v1. Per-fixture
+movement was +1 handwritten crop, +1 `IMG_2632`, unchanged reference, and −2 `sudoku300`.
+Therefore bounding-box normalization is useful preprocessing structure but not an accuracy win by
+itself. Do not use the 99.5% synthetic validation score for model selection. Expand training with
+low-resolution rasterization/resampling and print-style variation, then compare on the unchanged
+real fixture set.
+
+V3 added low-resolution resampling, stroke-weight, blur, scale, and rotation augmentation. It
+scored 73/112 valid-crop digits (65.2%), only one digit above v1/v2: 29/30 handwritten crop,
+30/30 reference, 7/25 `IMG_2632`, and 7/27 `sudoku300`. This is a synthetic-only MLP plateau, not
+a release candidate. Raw `photo-evaluation*.json` exports are ignored and may be deleted after
+their results are summarized here and in the implementation plan.
+
+The compact CNN spike exports both ONNX and a runtime-free JSON weight format. The ONNX model is
+88,722 bytes, but ONNX Runtime Web adds approximately 3.42 MiB compressed WASM, putting the total
+near 3.52 MiB. The custom JavaScript CNN weights are 452,836 bytes raw and about 197,514 bytes
+gzip, with only a small inference module. A stored zero-input logit vector verifies JavaScript
+convolution/dense output against PyTorch before fixture evaluation.
+
+The first runtime-free CNN fixture run recognized 78/112 given digits (69.6%) on valid crops,
+versus 73/112 for the best MLP. It scored 29/30 on the handwritten-style crop, 30/30 on the
+reference, 13/25 on `IMG_2632`, and 6/27 on low-resolution `sudoku300`. Model load was about 16ms,
+per-grid inference 34–43ms, and median end-to-end processing 114ms. This justifies preserving the
+compact CNN path, but not shipping it: low-resolution/font generalization remains inadequate.
+
 ## Production delivery constraint
 
 OCR assets are optional network resources. The scanner entry module, runtime JavaScript/WASM,

@@ -44,6 +44,39 @@ and inference 1–2ms. Conclusion: preserve this as a successful size/architectu
 ship it—the strong font variance is unacceptable. Next improve glyph normalization/training diversity;
 only add ONNX runtime if a browser-native model cannot reach the accuracy target.
 
+MLP v2 normalization spike (2026-07-11): identical browser/trainer preprocessing crops each glyph
+to its ink bounds, scales proportionally into 12×14, and centers it in 16×16. Held-out synthetic
+accuracy increased from 75.7% to 99.5% while model size stayed effectively flat (264,033 bytes raw,
+~112,840 bytes gzip). Awaiting the five-fixture real-image benchmark before deciding whether v2 is
+a commit checkpoint or another training iteration is needed. Real-fixture result: still 72/112
+(64.3%) on valid crops—no net improvement. Handwritten crop improved 27→28, `IMG_2632` 7→8,
+reference stayed 30/30, and low-resolution `sudoku300` regressed 8→6. Do not commit v2 as a
+milestone. Next iteration must add low-resolution/resampling and broader print-style augmentation;
+synthetic validation alone is demonstrably insufficient.
+
+MLP v3 augmentation result (2026-07-11): low-resolution resampling, stroke-weight, blur, scale,
+and rotation augmentation reached 73/112 valid-crop digits (65.2%), only +1 over v1/v2. Per
+fixture: handwritten crop 29/30, reference 30/30, `IMG_2632` 7/25, `sudoku300` 7/27. Model load
+was ~27ms and inference 1–2ms. This confirms a plateau for the current synthetic-only two-layer
+MLP. Do not commit v3 as a model milestone. Preserve the committed v1 baseline; next compare a
+small convolutional model/runtime or acquire more representative training data rather than adding
+more synthetic augmentation blindly.
+
+CNN runtime spike (2026-07-11): compact two-convolution model reached 97.5% synthetic validation
+and exports to 88,722-byte ONNX, but ONNX Runtime Web's required WASM is ~3.42 MiB compressed
+(~3.52 MiB total), above the preferred optional-download budget. A runtime-free JavaScript export
+is 452,836 bytes raw / ~197,514 bytes gzip plus a small inference module, and is verified against
+PyTorch logits. Five-fixture real-image benchmark pending; prefer this route if accuracy is
+competitive because it preserves the HTTP-cache-only download goal without a general ML runtime.
+
+CNN fixture result (2026-07-11): runtime-free CNN reached 78/112 valid-crop digits (69.6%),
+beating the MLP plateau's 73/112. Per fixture: handwritten crop 29/30, reference 30/30,
+`IMG_2632` 13/25, and `sudoku300` 6/27; the known invalid full-screen crop remained excluded.
+Model load was ~16ms, inference 34–43ms, and median total processing 114ms. Preserve as a compact
+CNN checkpoint, but accuracy remains below release quality. The next highest-value work is adding
+representative real/print-style training samples or improving low-resolution preprocessing—not a
+larger runtime. Continue to surface uncertainty and require review in the product design.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

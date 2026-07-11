@@ -24,7 +24,7 @@ SEED = 20260711
 def render(digit: int, rng: random.Random) -> np.ndarray:
     canvas = Image.new("L", (32, 32), 255)
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.truetype(str(rng.choice(FONTS)), rng.randint(20, 29))
+    font = ImageFont.truetype(str(rng.choice(FONTS)), rng.randint(17, 31))
     box = draw.textbbox((0, 0), str(digit), font=font, stroke_width=0)
     w, h = box[2] - box[0], box[3] - box[1]
     x = (32 - w) / 2 - box[0] + rng.uniform(-3, 3)
@@ -36,8 +36,28 @@ def render(digit: int, rng: random.Random) -> np.ndarray:
                                fillcolor=255)
     if rng.random() < .25:
         canvas = canvas.filter(ImageFilter.GaussianBlur(rng.uniform(.2, .65)))
+    if rng.random() < .55:
+        # Simulate small web screenshots/newsprint that have been resized before scanning.
+        low = rng.randint(11, 25)
+        canvas = canvas.resize((low, low), Image.Resampling.BILINEAR).resize(
+            (32, 32), rng.choice([Image.Resampling.NEAREST, Image.Resampling.BILINEAR]))
+    roll = rng.random()
+    if roll < .12:
+        canvas = canvas.filter(ImageFilter.MinFilter(3))  # darker/thicker ink
+    elif roll < .24:
+        canvas = canvas.filter(ImageFilter.MaxFilter(3))  # thinner/broken ink
     small = canvas.resize((16, 16), Image.Resampling.LANCZOS)
-    return (255 - np.asarray(small, dtype=np.float32)).reshape(-1) / 255
+    ink = 255 - np.asarray(small, dtype=np.uint8)
+    ys, xs = np.where(ink > 25)
+    if not len(xs):
+        return np.zeros(256, np.float32)
+    crop = Image.fromarray(ink[ys.min():ys.max()+1, xs.min():xs.max()+1], mode="L")
+    scale = min(12 / crop.width, 14 / crop.height)
+    resized = crop.resize((max(1, round(crop.width * scale)), max(1, round(crop.height * scale))),
+                          Image.Resampling.NEAREST)
+    normalized = Image.new("L", (16, 16), 0)
+    normalized.paste(resized, ((16 - resized.width)//2, (16 - resized.height)//2))
+    return np.asarray(normalized, dtype=np.float32).reshape(-1) / 255
 
 def softmax(z):
     z = z - z.max(axis=1, keepdims=True)
@@ -81,7 +101,8 @@ def main():
     pred = np.argmax(np.maximum(xv @ w1 + b1, 0) @ w2 + b2, axis=1)
     accuracy = float(np.mean(pred == yv))
     OUT.parent.mkdir(exist_ok=True)
-    payload = {"version": 1, "input": [1, 16, 16], "classes": list(range(1, 10)),
+    payload = {"version": 3, "input": [1, 16, 16], "normalization": "bbox-12x14-v1",
+               "classes": list(range(1, 10)),
                "validationAccuracy": accuracy, "fonts": len(FONTS),
                "w1": w1.round(6).tolist(), "b1": b1.round(6).tolist(),
                "w2": w2.round(6).tolist(), "b2": b2.round(6).tolist()}
