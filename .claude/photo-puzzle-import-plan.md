@@ -107,6 +107,12 @@ it moved only 80/112→81/112 (handwritten 30/30, reference 30/30, `IMG_2632` 12
 9/27). One additional style is insufficient. Obtain/process `facebook cropped` plus a corrected
 crop/rectification for `y4...` before retraining again.
 
+Low-quality Facebook result: 40.4px/cell and 83.1% edge-detector confidence still yielded only
+49/81 occupancy and 6/41 digit accuracy. Classify as a stress/rejection fixture, not training.
+Fixed labeled export to require exact ground-truth occupancy for every fixture, including automatic
+detections. Resolution/confidence alone cannot guarantee cell mapping; production always needs
+editable review and a clear “try another photo” route.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

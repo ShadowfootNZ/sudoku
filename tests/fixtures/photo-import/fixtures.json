@@ -12,7 +12,7 @@
     { "file": "y4f37ifec7aa1 cropped.jpg", "kind": "photo", "tier": "medium", "role": "training", "derivedFrom": "y4f37ifec7aa1.jpg", "notes": ["manual crop", "paper texture", "mild residual perspective"] },
     { "file": "images1.jpg", "kind": "photo", "tier": "medium", "notes": ["page context", "mild perspective", "low resolution"] },
     { "file": "facebook.jpg", "kind": "photo", "tier": "hard", "notes": ["colored cells", "shadow", "perspective distortion", "low resolution"] },
-    { "file": "facebook cropped.jpg", "kind": "photo", "tier": "hard", "role": "training", "derivedFrom": "facebook.jpg", "notes": ["manual crop", "colored cells", "shadow", "low resolution"] },
+    { "file": "facebook cropped.jpg", "kind": "photo", "tier": "hard", "role": "stress", "derivedFrom": "facebook.jpg", "notes": ["manual crop", "colored cells", "shadow", "low resolution", "49/81 occupancy despite automatic detection; exclude from labeled training"] },
     { "file": "finders.jpg", "kind": "photo", "tier": "hard", "notes": ["large page context", "hand occlusion", "perspective distortion", "low resolution"] },
     { "file": "images.jpg", "kind": "photo", "tier": "hard", "notes": ["overlaid social text", "page context", "perspective distortion", "low resolution"] },
     { "file": "images cropped.jpg", "kind": "photo", "tier": "hard", "role": "stress", "derivedFrom": "images.jpg", "notes": ["manual crop", "newsprint", "low resolution", "ambiguous or internally inconsistent visible clues; exclude from labeled training"] },

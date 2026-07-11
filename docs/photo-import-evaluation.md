@@ -99,6 +99,8 @@ fixtures, grouped by filename for leave-one-fixture-out validation. It contains 
 but remains generated local test data and is ignored by Git.
 Fallback crops are included only when their blank/nonblank occupancy matches ground truth exactly;
 this retains correctly segmented `IMG_2632.jpg` while excluding the failed full-screen crop.
+The same exact-occupancy requirement applies to automatically detected grids: detector confidence
+does not prove correct cell mapping.
 
 ## Production delivery constraint
 
@@ -144,6 +146,11 @@ at 96/140 overall. Accuracy on the original four held-out fixtures improved only
 81/112. `y4... cropped` was correctly excluded because occupancy segmentation reached only 60/81.
 Do not use a crop for training merely because its total resolution is high; cell mapping must also
 match ground truth exactly.
+
+`facebook cropped.jpg` is a deliberate low-quality failure fixture: 40.4px/cell, edge-detector
+confidence 83.1%, but only 49/81 occupancy and 6/41 visible digits recognized. It must not enter
+training. This demonstrates that pixel resolution and detector confidence are necessary but not
+sufficient quality signals; the product must retain editable review and allow “try another photo.”
 
 Run the reproducible grouped check with:
 

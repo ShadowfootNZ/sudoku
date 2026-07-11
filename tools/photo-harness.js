@@ -218,8 +218,9 @@ function buildLabeledCells(results) {
   const samples = [];
   for (const result of results) {
     if (!result.expected || !result._features) continue;
-    const trustedSegmentation = !result.boundary.method.includes('fallback') ||
-      result.occupancyMetrics?.exactGrid === true;
+    // Ground truth is available in this harness, so detector confidence alone must never
+    // authorize exporting incorrectly mapped cell crops as training data.
+    const trustedSegmentation = result.occupancyMetrics?.exactGrid === true;
     if (!trustedSegmentation) continue;
     result.expected.forEach((digit, cell) => {
       if (digit) samples.push({ fixture: result.filename, cell, digit, feature: result._features[cell] });
