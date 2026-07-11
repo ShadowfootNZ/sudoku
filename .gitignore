@@ -1,1 +1,9 @@
 .DS_Store
+
+# Photo-import fixtures are local/reproducible; keep their reconstruction metadata tracked.
+/tests/fixtures/photo-import/*
+!/tests/fixtures/photo-import/fixtures.json
+!/tests/fixtures/photo-import/ground-truth.json
+
+# Generated benchmark reports; material results are summarized in the plan/docs.
+/tests/photo-evaluation*.json
