@@ -1,6 +1,9 @@
 {
   "version": 1,
   "fixtures": [
+    { "file": "IMG_0543.jpg", "kind": "photo", "tier": "hard", "role": "training", "notes": ["converted from HEIC", "real newspaper", "shadow and paper texture", "manual perspective correction required"] },
+    { "file": "IMG_0544.jpg", "kind": "photo", "tier": "hard", "role": "training", "notes": ["converted from HEIC", "real newspaper", "shadow and paper texture", "manual perspective correction required"] },
+    { "file": "IMG_0545.jpg", "kind": "photo", "tier": "hard", "role": "evaluation", "notes": ["converted from HEIC", "real newspaper", "shadow and paper texture", "manual perspective correction required", "reserve as unseen newspaper holdout"] },
     { "file": "7c223be9bb3d4e17ae661892c8b8339d.jpg", "kind": "photo", "tier": "medium", "role": "training", "notes": ["manual perspective correction required", "book print"] },
     { "file": "1346524.jpg", "kind": "digital", "tier": "medium", "role": "training", "notes": ["manual perspective correction used", "clean serif print"] },
     { "file": "skyscraper.webp", "kind": "photo", "tier": "hard", "role": "training", "notes": ["manual perspective correction required", "low contrast paper"] },

@@ -177,3 +177,8 @@ Of eight then-scored fixtures, five had exact occupancy and contributed 138 labe
 is expected behavior: cropped and uncropped derivatives are diagnostic cases, not independent
 training samples. Three newly transcribed, solver-validated rectified sources add book serif,
 clean serif, and low-contrast paper styles; ambiguous/watermarked grids remain stress-only.
+
+Three real newspaper device photos rectified successfully after HEIC-to-JPEG conversion, taking
+427–475ms end to end. The harness now reports a specific HEIC decode error. Native browser HEIC
+support/transcoding must be tested on target devices; the initial product should not pay the
+download/storage cost of a HEIC conversion library unless field usage justifies it.

@@ -140,6 +140,14 @@ Three additional visually unambiguous rectified sources (`7c223...`, `1346524.jp
 `skyscraper.webp`) now have solver-validated ground truth; other ambiguous/watermarked sources
 remain stress-only. Next export labeled cells from these three without changing the held-out set.
 
+Real newspaper cohort (2026-07-12): three device photos required manual perspective correction and
+processed in 427–475ms after HEIC→JPEG conversion. Added solver-validated ground truth; reserve one
+as an unseen newspaper holdout. HEIC policy: attempt native browser decode, but do not bundle a
+large converter initially. On decode failure say “This browser cannot read HEIC images. Choose a
+JPEG/PNG copy or take another photo.” Verify whether native camera/file pickers transcode on target
+iOS/iPadOS devices during Phase 1; revisit an on-demand converter only if analytics show material
+failure volume.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

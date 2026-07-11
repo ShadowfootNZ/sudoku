@@ -109,7 +109,15 @@ exportCellsButton.addEventListener('click', () => {
 async function evaluate(file, manualCorners = null) {
   const start = performance.now();
   const decodeStart = performance.now();
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch (error) {
+    if (/\.heic$/i.test(file.name) || /heic/i.test(file.type)) {
+      throw new Error('This browser cannot read HEIC images. Choose a JPEG/PNG copy or take another photo.');
+    }
+    throw new Error(`This image could not be decoded: ${error.message}`);
+  }
   const decodeMs = performance.now() - decodeStart;
   const maxSide = 1600;
   const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
