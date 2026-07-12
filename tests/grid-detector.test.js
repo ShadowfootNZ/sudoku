@@ -16,6 +16,28 @@ function solid(value) {
 assert.equal(classifyBlank(solid(255)).blank, true);
 assert.equal(classifyBlank(solid(0)).blank, false);
 
+function grayscaleImage(size, pixel) {
+  const data = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const value = pixel(x, y);
+    data.set([value, value, value, 255], (y * size + x) * 4);
+  }
+  return { width: size, height: size, data };
+}
+
+// Gradual illumination and fine paper texture should normalize away.
+const texturedPaper = grayscaleImage(64, (x, y) => 205 + x * .5 + ((x * 17 + y * 31) % 9));
+assert.equal(classifyBlank(texturedPaper).blank, true);
+
+// A central digit-sized stroke must survive that same uneven background.
+const printedOne = grayscaleImage(64, (x, y) => {
+  const paper = 210 + x * .35 + ((x * 17 + y * 31) % 7);
+  return x >= 29 && x <= 34 && y >= 15 && y <= 49 ? 45 : paper;
+});
+const printedResult = classifyBlank(printedOne);
+assert.equal(printedResult.blank, false);
+assert.ok(printedResult.componentCount >= 1);
+
 // A pale grid is invisible to the dark-pixel threshold but must be found from edges.
 const size = 100;
 const pale = new Uint8ClampedArray(size * size * 4).fill(255);

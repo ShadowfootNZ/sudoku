@@ -177,6 +177,7 @@ async function evaluate(file, manualCorners = null) {
     // reporting misleading OCR accuracy for a segmentation-only baseline.
     metrics: occupancyMetrics, metricType: 'occupancy', predictedOccupancy,
     inkRatios: blankPrediction.map(item => item.inkRatio),
+    blankDiagnostics: blankPrediction,
     previewUrl: canvas.toDataURL('image/webp', 0.85), cellUrls: cells, _features: features,
     _file: file, _sourcePreviewUrl: originalUrl,
     _initialCorners: boundaryToCorners(detected || fallback),

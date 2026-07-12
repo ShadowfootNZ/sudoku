@@ -200,3 +200,9 @@ from paper/grid texture. That implies about 45 edits after import, compared with
 Before product integration, replace the fixed ink-ratio blank test with texture/background removal
 and connected-component evidence. The acceptance metric is user corrections saved, not OCR digit
 accuracy alone.
+
+The first background-normalized classifier is now implemented. It subtracts a broad local mean,
+ignores the cell perimeter, and requires a central connected component with digit-like dimensions.
+Synthetic tests cover uneven textured paper and a printed stroke. Rerun the complete newspaper
+cohort in the browser harness to measure false-positive blanks and total corrections saved before
+tuning its component thresholds or beginning product integration.

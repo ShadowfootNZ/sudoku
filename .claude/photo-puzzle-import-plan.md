@@ -166,6 +166,11 @@ manual entry. Product flow is now settled—preflight quality/detection, prompt 
 needed, then show an editable review grid—but Phase 1 integration waits for a texture-robust blank
 detector. Confidence remains review ordering only; initially highlight every imported clue.
 
+Background-normalized blank detection is implemented using local-mean subtraction and central
+connected-component evidence. Automated texture/stroke cases pass. Next acceptance gate: rerun the
+newspaper cohort and compare false-positive occupancy and total required edits with the v2 baseline
+(32 false-positive blanks; approximately 45 edits).
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
