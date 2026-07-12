@@ -10,9 +10,11 @@ import {
 } from './ui.js';
 import { initInput, setInputHandlers } from './input.js';
 import { generateGraded, countSolutions, solve, hasConflictingGivens } from './generator.js';
+import { loadPhotoScanner } from './photo-scanner-loader.js';
 
 let inEntryMode = false;
 let entryGrid   = new Array(81).fill(0);
+let entryReviewCells = new Set();
 
 function updateEntryNumpad() {
   const counts = new Array(10).fill(0);
@@ -34,28 +36,33 @@ function showEntryError(msg) {
 
 function enterEntryMode({ preserve = false } = {}) {
   inEntryMode = true;
-  if (!preserve) entryGrid = new Array(81).fill(0);
+  if (!preserve) { entryGrid = new Array(81).fill(0); entryReviewCells = new Set(); }
   setInputHandlers({
     digit: d => {
       if (state.selected === -1) return;
       entryGrid[state.selected] = d;
+      entryReviewCells.delete(state.selected);
       document.getElementById('entry-error').hidden = true;
-      renderEntryAll(entryGrid);
+      renderEntryAll(entryGrid, entryReviewCells);
       updateEntryNumpad();
     },
     delete: () => {
       if (state.selected === -1) return;
       entryGrid[state.selected] = 0;
+      entryReviewCells.delete(state.selected);
       document.getElementById('entry-error').hidden = true;
-      renderEntryAll(entryGrid);
+      renderEntryAll(entryGrid, entryReviewCells);
       updateEntryNumpad();
     },
   });
   document.getElementById('mode-controls').hidden  = true;
   document.getElementById('entry-controls').hidden = false;
   document.getElementById('entry-error').hidden    = true;
+  document.getElementById('entry-instructions').textContent = entryReviewCells.size
+    ? 'Review every highlighted digit, correct any mistakes, then tap Confirm.'
+    : "Enter the puzzle's given digits, then tap Confirm.";
   updateEntryNumpad();
-  renderEntryAll(entryGrid);
+  renderEntryAll(entryGrid, entryReviewCells);
 }
 
 function exitEntryMode() {
@@ -64,6 +71,29 @@ function exitEntryMode() {
   document.getElementById('mode-controls').hidden  = false;
   document.getElementById('entry-controls').hidden = true;
   updateNumpad();
+}
+
+async function importPhoto(file) {
+  const button = document.getElementById('photo-import-btn');
+  const instructions = document.getElementById('entry-instructions');
+  button.disabled = true;
+  instructions.textContent = 'Loading photo scanner…';
+  try {
+    const scanner = await loadPhotoScanner();
+    instructions.textContent = 'Finding the grid and reading digits…';
+    const result = await scanner.scanPhoto(file);
+    entryGrid = [...result.digits];
+    entryReviewCells = new Set(result.reviewCells);
+    renderEntryAll(entryGrid, entryReviewCells);
+    updateEntryNumpad();
+    instructions.textContent = 'Review every highlighted digit, correct any mistakes, then tap Confirm.';
+    document.getElementById('entry-error').hidden = true;
+  } catch (error) {
+    showEntryError(error.message || 'The photo could not be scanned. Enter the puzzle manually.');
+    instructions.textContent = 'Enter the puzzle manually, or try another photo.';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function startNewGame(difficulty) {
@@ -248,7 +278,7 @@ function init() {
   });
 
   document.addEventListener('selectionchange', () => {
-    if (inEntryMode) renderEntryAll(entryGrid);
+    if (inEntryMode) renderEntryAll(entryGrid, entryReviewCells);
     else renderAll();
     updateFillBtn();
   });
@@ -282,6 +312,15 @@ function init() {
 
   document.getElementById('new-game-btn').addEventListener('click', () => {
     startNewGame(document.getElementById('difficulty-select').value);
+  });
+
+  const photoInput = document.getElementById('photo-import-input');
+  document.getElementById('photo-import-btn').addEventListener('click', () => {
+    photoInput.value = '';
+    photoInput.click();
+  });
+  photoInput.addEventListener('change', () => {
+    if (photoInput.files[0]) importPhoto(photoInput.files[0]);
   });
 
   document.getElementById('notes-btn').addEventListener('click', () => {
@@ -343,8 +382,9 @@ function init() {
       const sel = state.selected;
       if (sel !== -1 && entryGrid[sel] !== 0) {
         entryGrid[sel] = 0;
+        entryReviewCells.delete(sel);
         document.getElementById('entry-error').hidden = true;
-        renderEntryAll(entryGrid);
+        renderEntryAll(entryGrid, entryReviewCells);
         updateEntryNumpad();
       } else {
         showClearDialog();
@@ -365,8 +405,9 @@ function init() {
       if (inEntryMode) {
         if (state.selected === -1) return;
         entryGrid[state.selected] = d;
+        entryReviewCells.delete(state.selected);
         document.getElementById('entry-error').hidden = true;
-        renderEntryAll(entryGrid);
+        renderEntryAll(entryGrid, entryReviewCells);
         updateEntryNumpad();
         return;
       }
@@ -452,8 +493,9 @@ function init() {
     hideOverlay();
     if (inEntryMode) {
       entryGrid = new Array(81).fill(0);
+      entryReviewCells = new Set();
       document.getElementById('entry-error').hidden = true;
-      renderEntryAll(entryGrid);
+      renderEntryAll(entryGrid, entryReviewCells);
       updateEntryNumpad();
     } else {
       state.resetPuzzle();

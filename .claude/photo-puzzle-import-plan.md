@@ -183,6 +183,13 @@ needs 13 edits versus 26 manual entries. Freeze blank-detection thresholds. Phas
 the next slice integrates on-demand acquisition/scanning with the existing custom-entry grid and
 marks imported values for review.
 
+First product slice implemented: custom entry now offers an `image/*` chooser (camera/library as
+provided by the device), lazy-loads scanner code and the CNN model, runs automatic grid detection,
+and fills the existing editable grid. Every imported clue is highlighted until the user changes
+it; existing conflict, solution-count, and uniqueness validation remains unchanged. Scanner code,
+support modules, and model remain outside the service-worker cache. Next slice: connect the manual
+four-corner editor when automatic detection returns the `corners` outcome.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

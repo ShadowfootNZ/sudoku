@@ -101,7 +101,7 @@ export function renderCell(i) {
   }
 }
 
-export function renderEntryAll(entryGrid) {
+export function renderEntryAll(entryGrid, reviewCells = null) {
   for (let i = 0; i < 81; i++) {
     const el = cells[i];
     if (!el) continue;
@@ -109,6 +109,7 @@ export function renderEntryAll(entryGrid) {
     const cls = ['cell'];
     if (digit) {
       cls.push('given');
+      if (reviewCells?.has(i)) cls.push('photo-review');
       if (state.PEERS[i].some(p => entryGrid[p] === digit)) cls.push('conflict');
     }
     if (i === state.raw.selected) cls.push('selected');

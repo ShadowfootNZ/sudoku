@@ -542,6 +542,15 @@ html, body {
   color: var(--mode-active-fg);
 }
 
+.cell.photo-review {
+  background: var(--hint-cell-bg);
+  box-shadow: inset 0 0 0 2px var(--hint-color);
+}
+
+#photo-import-btn {
+  width: 100%;
+}
+
 #entry-error {
   font-size: 13px;
   color: var(--error-text);
