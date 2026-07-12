@@ -152,6 +152,20 @@ Harness export usability: show occupancy per result. Exact 81/81 enables export 
 developer-only “Approve cells for training” may override after visual verification of all 81
 cell crops. It never changes metrics and must not appear in the product UI.
 
+Real-photo training run (2026-07-12): merged 309 labeled digits across eleven fixture styles.
+Leave-one-fixture-out accuracy rose to 223/309 (72.2%); newspaper folds scored 18/32, 19/28,
+and the held-out `IMG_0545` 14/26. Representative camera data produces a real improvement but is
+still far below automatic-entry quality. Trained CNN-JS v2 on 283 unique real cells plus synthetic
+data, explicitly excluding `IMG_0545`; model remains ~453KB raw. Preserve v2 as the Phase 0
+candidate and judge it using the untouched holdout below.
+
+Untouched newspaper holdout: CNN-JS v2 recognized 13/26 digits (50%), improving v1's 9/26.
+Candidate is worth preserving, but blank detection produced 58 occupied cells for 26 true clues:
+32 false positives and roughly 45 required corrections (32 deletes + 13 wrong digits), worse than
+manual entry. Product flow is now settled—preflight quality/detection, prompt for corners when
+needed, then show an editable review grid—but Phase 1 integration waits for a texture-robust blank
+detector. Confidence remains review ordering only; initially highlight every imported clue.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

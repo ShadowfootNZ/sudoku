@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "classes": [
     1,
     2,
@@ -17,7 +17,11 @@
     16
   ],
   "normalization": "bbox-12x14-v1",
-  "validationAccuracy": 0.9746031761169434,
+  "validationAccuracy": 0.9650793671607971,
   "fonts": 19,
+  "realSamples": 283,
+  "excludedFixtures": [
+    "IMG_0545.jpg"
+  ],
   "bytes": 88722
 }

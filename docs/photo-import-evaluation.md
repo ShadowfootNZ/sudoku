@@ -187,3 +187,16 @@ Labeled export is automatic at exact 81/81 occupancy. A developer may use **Appr
 training** after visually verifying all 81 extracted cell positions when blank classification—not
 cell mapping—is imperfect. The override affects only generated training export and never changes
 reported metrics. It is not an end-user product control.
+
+Merging eleven fixture styles produced 309 labeled digits and 223/309 (72.2%) grouped accuracy.
+The three newspaper folds scored 18/32, 19/28, and 14/26, showing that genuine camera examples help
+but do not yet support trusted automatic entry. CNN-JS v2 trains on 283 unique real cells plus
+synthetic samples while explicitly excluding `IMG_0545.jpg`; that image remains the untouched
+newspaper acceptance check.
+
+On the untouched `IMG_0545.jpg` holdout, CNN-JS v2 scored 13/26 digits (50%), versus 9/26 for v1.
+The blank detector nevertheless produced 58 occupied cells: all 26 clues plus 32 false positives
+from paper/grid texture. That implies about 45 edits after import, compared with 26 manual entries.
+Before product integration, replace the fixed ink-ratio blank test with texture/background removal
+and connected-component evidence. The acceptance metric is user corrections saved, not OCR digit
+accuracy alone.

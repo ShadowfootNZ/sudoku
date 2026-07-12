@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json, random, runpy
 from pathlib import Path
+import argparse
 import numpy as np
 import torch
 from torch import nn
@@ -26,13 +27,29 @@ class DigitCNN(nn.Module):
         return self.classifier(self.features(x))
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cells', type=Path, nargs='*', default=[])
+    parser.add_argument('--exclude', action='append', default=[])
+    args = parser.parse_args()
     rng = random.Random(seed)
     samples = [(render(d, rng), d - 1) for d in range(1, 10) for _ in range(700)]
     rng.shuffle(samples)
     x = torch.tensor(np.stack([s[0] for s in samples])).reshape(-1, 1, 16, 16)
     y = torch.tensor([s[1] for s in samples], dtype=torch.long)
     split = int(len(x) * .9)
-    train = DataLoader(TensorDataset(x[:split], y[:split]), batch_size=128, shuffle=True)
+    real = {}
+    for path in args.cells:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        for sample in payload['samples']:
+            if sample['fixture'] not in args.exclude:
+                real[(sample['fixture'], sample['cell'])] = sample
+    train_x, train_y = x[:split], y[:split]
+    if real:
+        rx = np.stack([sample['feature'] for sample in real.values()] * 12).astype(np.float32)
+        ry = np.array([sample['digit'] - 1 for sample in real.values()] * 12)
+        train_x = torch.cat([train_x, torch.tensor(rx).reshape(-1, 1, 16, 16)])
+        train_y = torch.cat([train_y, torch.tensor(ry, dtype=torch.long)])
+    train = DataLoader(TensorDataset(train_x, train_y), batch_size=128, shuffle=True)
     model = DigitCNN()
     optimizer = torch.optim.Adam(model.parameters(), lr=.002)
     loss_fn = nn.CrossEntropyLoss()
@@ -46,9 +63,11 @@ def main():
     torch.onnx.export(model, torch.zeros(1, 1, 16, 16), out, input_names=["input"],
                       output_names=["logits"], dynamic_axes={"input": {0: "batch"},
                       "logits": {0: "batch"}}, opset_version=18, dynamo=False)
-    meta = {"version": 1, "classes": list(range(1, 10)), "input": [1, 16, 16],
+    model_version = 2 if real else 1
+    meta = {"version": model_version, "classes": list(range(1, 10)), "input": [1, 16, 16],
             "normalization": "bbox-12x14-v1", "validationAccuracy": accuracy,
-            "fonts": len(fonts), "bytes": out.stat().st_size}
+            "fonts": len(fonts), "realSamples": len(real), "excludedFixtures": args.exclude,
+            "bytes": out.stat().st_size}
     out.with_suffix(".json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     with torch.no_grad(): zero_logits = model(torch.zeros(1, 1, 16, 16))[0].tolist()
     weights = {"version": 1, **meta, "format": "cnn-js-v1",
