@@ -206,6 +206,12 @@ the automatically detected corners for user confirmation before accepting OCR. T
 trades one confirmation for protection against silent high-edit imports; markers should already be
 near the grid when detection is correct.
 
+Lightweight analytics added using the existing endpoint. The original app-open payload is
+unchanged; photo interactions add only one fixed `event` field: `photo_import_opened`,
+`photo_import_confirmed`, or `photo_import_cancelled`. Confirm/cancel are emitted only after a scan
+has populated the entry grid. No filename, image metadata, pixels, puzzle digits, or cell data is
+sent.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

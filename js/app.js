@@ -17,6 +17,11 @@ let entryGrid   = new Array(81).fill(0);
 let entryReviewCells = new Set();
 let cornerEditor = null;
 let cropEditor = null;
+let photoImportActive = false;
+
+function trackPhotoFeature(event) {
+  globalThis.trackAppFeature?.(event);
+}
 
 function updateEntryNumpad() {
   const counts = new Array(10).fill(0);
@@ -97,6 +102,7 @@ async function importPhoto(file, corners = null, offerCrop = true, confirmDetect
     }
     entryGrid = [...result.digits];
     entryReviewCells = new Set(result.reviewCells);
+    photoImportActive = true;
     renderEntryAll(entryGrid, entryReviewCells);
     updateEntryNumpad();
     instructions.textContent = 'Review every highlighted digit, correct any mistakes, then tap Confirm.';
@@ -421,6 +427,7 @@ function init() {
 
   const photoInput = document.getElementById('photo-import-input');
   document.getElementById('photo-import-btn').addEventListener('click', () => {
+    trackPhotoFeature('photo_import_opened');
     photoInput.value = '';
     photoInput.click();
   });
@@ -640,6 +647,8 @@ function init() {
     }
 
     const solution = solve([...puzzle]);
+    if (photoImportActive) trackPhotoFeature('photo_import_confirmed');
+    photoImportActive = false;
     exitEntryMode();
     state.newGame(puzzle, solution, 'custom');
     buildGrid();
@@ -654,6 +663,8 @@ function init() {
   });
 
   document.getElementById('entry-cancel-btn').addEventListener('click', () => {
+    if (photoImportActive) trackPhotoFeature('photo_import_cancelled');
+    photoImportActive = false;
     exitEntryMode();
     document.getElementById('difficulty-select').value = state.difficulty;
     renderAll();
