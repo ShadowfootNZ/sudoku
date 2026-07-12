@@ -214,3 +214,10 @@ about 45 required edits to 22, versus 26 manual entries. Across the cohort the i
 the smallest real component was 181 pixels, so the minimum component area was safely raised to
 about 2.5% of the cell. Rerun the cohort once more to validate that refinement. Larger false
 positives overlap genuine digits in size and must not be removed with a simple area threshold.
+
+Evaluation 23 validates the raised area floor. All 86 genuine clues remain detected; false-positive
+blanks fell from 14 to 6 and total required edits fell from 35 to 30, compared with 86 manual
+entries. The untouched `IMG_0545` holdout now has 3 false positives and needs 13 total edits rather
+than 26 manual entries. Background-normalized occupancy therefore passes the Phase 0 user-value
+gate. Freeze its thresholds and move to the product flow: acquire image, assess/propose corners,
+rectify, recognize, and populate an explicitly reviewable custom-entry grid.

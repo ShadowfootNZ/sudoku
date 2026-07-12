@@ -177,6 +177,12 @@ positive blanks and 35 total edits across the three grids versus 86 manual entri
 entries. Raise the component-area floor to discard three clearly separated 16–22px specks, rerun
 the cohort, then proceed to the editable review-grid integration if no clues regress.
 
+Evaluation 23 passes that regression gate: 86/86 clues retained, false positives reduced from 14
+to 6, and 30 edits required across the cohort instead of 86 manual entries. Untouched `IMG_0545`
+needs 13 edits versus 26 manual entries. Freeze blank-detection thresholds. Phase 0 is complete;
+the next slice integrates on-demand acquisition/scanning with the existing custom-entry grid and
+marks imported values for review.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
