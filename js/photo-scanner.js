@@ -3,7 +3,7 @@ import { warpPerspective } from '../tools/perspective.js';
 import { loadCnnRecognizer } from '../tools/cnn-recognizer.js';
 import { normalizeGlyph } from '../tools/mlp-recognizer.js';
 
-export async function scanPhoto(file, normalizedCorners = null) {
+export async function scanPhoto(file, normalizedCorners = null, recognize = true) {
   if (normalizedCorners && !validCornerSelection(normalizedCorners)) {
     throw new PhotoScanError('corners', 'Keep the four corners in numbered order around the grid and spread them farther apart.');
   }
@@ -29,9 +29,9 @@ export async function scanPhoto(file, normalizedCorners = null) {
     Math.hypot(corners[2].x-corners[1].x,corners[2].y-corners[1].y));
   const quality = assessGridQuality(boundary || { width:cornerWidth, height:cornerHeight });
   if (quality.level === 'reject') throw new PhotoScanError('quality', quality.message);
-  return recognizeGrid(warpPerspective(source, corners, 900), {
-    boundary: boundary || { method:'manual-perspective', confidence:1 }, quality,
-  });
+  const details = { boundary: boundary || { method:'manual-perspective', confidence:1 }, quality,
+    source: { width:canvas.width, height:canvas.height } };
+  return recognize ? recognizeGrid(warpPerspective(source, corners, 900), details) : details;
 }
 
 export function validCornerSelection(corners) {

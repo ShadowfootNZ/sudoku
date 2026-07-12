@@ -75,7 +75,7 @@ function exitEntryMode() {
   updateNumpad();
 }
 
-async function importPhoto(file, corners = null, offerCrop = true) {
+async function importPhoto(file, corners = null, offerCrop = true, confirmDetectedCorners = false) {
   const button = document.getElementById('photo-import-btn');
   const instructions = document.getElementById('entry-instructions');
   button.disabled = true;
@@ -83,7 +83,18 @@ async function importPhoto(file, corners = null, offerCrop = true) {
   try {
     const scanner = await loadPhotoScanner();
     instructions.textContent = 'Finding the grid and reading digits…';
-    const result = await scanner.scanPhoto(file, corners);
+    const result = await scanner.scanPhoto(file, corners, !confirmDetectedCorners || !!corners);
+    if (confirmDetectedCorners && !corners) {
+      const {boundary,source}=result;
+      const proposed=[
+        {x:boundary.x/source.width,y:boundary.y/source.height},
+        {x:(boundary.x+boundary.width)/source.width,y:boundary.y/source.height},
+        {x:(boundary.x+boundary.width)/source.width,y:(boundary.y+boundary.height)/source.height},
+        {x:boundary.x/source.width,y:(boundary.y+boundary.height)/source.height},
+      ];
+      await openCornerEditor(file, '', proposed);
+      return;
+    }
     entryGrid = [...result.digits];
     entryReviewCells = new Set(result.reviewCells);
     renderEntryAll(entryGrid, entryReviewCells);
@@ -145,7 +156,7 @@ async function cropPhoto() {
   return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Crop failed.')),'image/jpeg',.92));
 }
 
-async function openCornerEditor(file, message = '') {
+async function openCornerEditor(file, message = '', proposedCorners = null) {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const canvas = document.getElementById('photo-corners-canvas');
   const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
@@ -155,7 +166,7 @@ async function openCornerEditor(file, message = '') {
   const left = (canvas.width - side) / 2, top = (canvas.height - side) / 2;
   cornerEditor = {
     file, bitmap, active: -1,
-    corners: [{x:left/canvas.width,y:top/canvas.height},
+    corners: proposedCorners || [{x:left/canvas.width,y:top/canvas.height},
       {x:(left+side)/canvas.width,y:top/canvas.height},
       {x:(left+side)/canvas.width,y:(top+side)/canvas.height},
       {x:left/canvas.width,y:(top+side)/canvas.height}],
@@ -449,7 +460,7 @@ function init() {
   });
   document.getElementById('photo-crop-confirm').addEventListener('click',async()=>{
     if(!cropEditor)return;
-    try { const cropped=await cropPhoto(); closeCropEditor(); importPhoto(cropped,null,false); }
+    try { const cropped=await cropPhoto(); closeCropEditor(); importPhoto(cropped,null,false,true); }
     catch(error) { showEntryError(error.message); }
   });
 

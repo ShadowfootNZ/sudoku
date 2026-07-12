@@ -200,6 +200,12 @@ rectangular crop with touch/pointer handles, cancel, or skip directly to corners
 creates an in-memory JPEG capped at 1600px and reruns automatic detection once; continued failure
 opens the corner editor on that cropped image. Neither original nor crop is persisted.
 
+iPad testing exposed a false-positive geometric detection after cropping: a plausible regular
+square passed confidence but produced badly divided OCR cells. Cropped images now always present
+the automatically detected corners for user confirmation before accepting OCR. This deliberately
+trades one confirmation for protection against silent high-edit imports; markers should already be
+near the grid when detection is correct.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`
