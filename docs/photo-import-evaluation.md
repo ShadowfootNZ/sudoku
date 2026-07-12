@@ -182,3 +182,8 @@ Three real newspaper device photos rectified successfully after HEIC-to-JPEG con
 427–475ms end to end. The harness now reports a specific HEIC decode error. Native browser HEIC
 support/transcoding must be tested on target devices; the initial product should not pay the
 download/storage cost of a HEIC conversion library unless field usage justifies it.
+
+Labeled export is automatic at exact 81/81 occupancy. A developer may use **Approve cells for
+training** after visually verifying all 81 extracted cell positions when blank classification—not
+cell mapping—is imperfect. The override affects only generated training export and never changes
+reported metrics. It is not an end-user product control.

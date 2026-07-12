@@ -148,6 +148,10 @@ JPEG/PNG copy or take another photo.” Verify whether native camera/file picker
 iOS/iPadOS devices during Phase 1; revisit an on-demand converter only if analytics show material
 failure volume.
 
+Harness export usability: show occupancy per result. Exact 81/81 enables export automatically;
+developer-only “Approve cells for training” may override after visual verification of all 81
+cell crops. It never changes metrics and must not appear in the product UI.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

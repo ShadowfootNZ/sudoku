@@ -201,6 +201,7 @@ function renderResult(result) {
       (${(result.boundary.confidence * 100).toFixed(0)}% confidence); decoded in
       ${result.decodeMs.toFixed(1)} ms; total ${result.totalMs.toFixed(1)} ms.
       ${result.recognizer ? `Digit accuracy ${(result.metrics.cellAccuracy * 100).toFixed(1)}%.` : ''}
+      ${result.occupancyMetrics ? `Occupancy ${result.occupancyMetrics.correct}/81.` : ''}
       ${result.quality.message}</p>`;
     const grid = document.createElement('div');
     grid.className = 'cells';
@@ -222,6 +223,23 @@ function renderResult(result) {
     adjust.type = 'button'; adjust.className = 'adjust-corners'; adjust.textContent = 'Adjust corners';
     adjust.addEventListener('click', () => openCornerEditor(result));
     details.append(adjust);
+    if (result.expected && result.occupancyMetrics && !result.occupancyMetrics.exactGrid) {
+      const approve = document.createElement('button');
+      approve.type = 'button'; approve.className = 'adjust-corners';
+      const updateApproval = () => {
+        approve.textContent = result.trainingApproval ? 'Cells approved for training' : 'Approve cells for training';
+        approve.setAttribute('aria-pressed', String(!!result.trainingApproval));
+      };
+      updateApproval();
+      approve.addEventListener('click', () => {
+        result.trainingApproval = !result.trainingApproval;
+        updateApproval(); refreshExports();
+      });
+      details.append(approve);
+      const warning = document.createElement('p');
+      warning.textContent = 'Approve only after visually checking that all 81 extracted cells align with the grid.';
+      details.append(warning);
+    }
     visual.append(details);
     article.append(visual);
   }
@@ -263,7 +281,7 @@ function buildLabeledCells(results) {
     if (!result.expected || !result._features) continue;
     // Ground truth is available in this harness, so detector confidence alone must never
     // authorize exporting incorrectly mapped cell crops as training data.
-    const trustedSegmentation = result.occupancyMetrics?.exactGrid === true;
+    const trustedSegmentation = result.occupancyMetrics?.exactGrid === true || result.trainingApproval === true;
     if (!trustedSegmentation) continue;
     result.expected.forEach((digit, cell) => {
       if (digit) samples.push({ fixture: result.filename, cell, digit, feature: result._features[cell] });
@@ -271,6 +289,17 @@ function buildLabeledCells(results) {
   }
   return { version: 1, normalization: 'bbox-12x14-v1', width: 16, height: 16,
     createdAt: new Date().toISOString(), samples };
+}
+
+function refreshExports() {
+  const totals = summarize(currentResults);
+  report = { version: 1, createdAt: new Date().toISOString(), totals,
+    results: currentResults.map(stripUrls) };
+  labeledCells = buildLabeledCells(currentResults);
+  exportCellsButton.disabled = labeledCells.samples.length === 0;
+  status.textContent = labeledCells.samples.length
+    ? `${labeledCells.samples.length} labeled cells ready to export.`
+    : 'No labeled cells are eligible. Correct the crop or explicitly approve verified cells.';
 }
 
 function downloadJson(value, filename) {
