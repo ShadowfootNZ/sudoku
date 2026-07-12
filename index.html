@@ -197,6 +197,16 @@
       <button id="photo-corners-confirm">Scan grid</button>
     </div>
   </div>
+  <div id="photo-crop-dialog" class="dialog hidden">
+    <h2>Crop around the puzzle</h2>
+    <p>Drag the red handles to remove everything outside the Sudoku.</p>
+    <canvas id="photo-crop-canvas"></canvas>
+    <div class="dialog-btns crop-dialog-btns">
+      <button id="photo-crop-cancel" class="btn-secondary">Cancel</button>
+      <button id="photo-crop-skip" class="btn-secondary">Skip to corners</button>
+      <button id="photo-crop-confirm">Crop and retry</button>
+    </div>
+  </div>
   <div id="help-dialog" class="dialog hidden">
     <h2>How to Play</h2>
     <div id="help-content">

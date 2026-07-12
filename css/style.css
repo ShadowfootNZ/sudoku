@@ -734,9 +734,29 @@ html, body {
   max-height: 92vh;
 }
 
+#photo-crop-dialog {
+  max-width: min(92vw, 620px);
+  max-height: 92vh;
+}
+
+#photo-crop-canvas {
+  display:block;
+  width:auto;
+  max-width:100%;
+  max-height:65vh;
+  object-fit:contain;
+  background:#111;
+  border-radius:8px;
+  touch-action:none;
+}
+
+.crop-dialog-btns { flex-wrap:wrap; }
+.crop-dialog-btns button { min-width:120px; }
+
 #photo-corners-canvas {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   max-height: 65vh;
   object-fit: contain;
   background: #111;

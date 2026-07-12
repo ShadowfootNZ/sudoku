@@ -195,6 +195,11 @@ numbered, pointer/touch-draggable markers and a centered-square starting proposa
 as normalized coordinates, the image remains only in memory, and confirmation reruns perspective
 correction plus OCR. Crossed, collapsed, or out-of-range selections are rejected before scanning.
 
+Crop-before-corners flow implemented for uncertain automatic detection. The user can resize a
+rectangular crop with touch/pointer handles, cancel, or skip directly to corners. `Crop and retry`
+creates an in-memory JPEG capped at 1600px and reruns automatic detection once; continued failure
+opens the corner editor on that cropped image. Neither original nor crop is persisted.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

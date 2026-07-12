@@ -16,6 +16,7 @@ let inEntryMode = false;
 let entryGrid   = new Array(81).fill(0);
 let entryReviewCells = new Set();
 let cornerEditor = null;
+let cropEditor = null;
 
 function updateEntryNumpad() {
   const counts = new Array(10).fill(0);
@@ -74,7 +75,7 @@ function exitEntryMode() {
   updateNumpad();
 }
 
-async function importPhoto(file, corners = null) {
+async function importPhoto(file, corners = null, offerCrop = true) {
   const button = document.getElementById('photo-import-btn');
   const instructions = document.getElementById('entry-instructions');
   button.disabled = true;
@@ -91,7 +92,8 @@ async function importPhoto(file, corners = null) {
     document.getElementById('entry-error').hidden = true;
   } catch (error) {
     if (error.reason === 'corners') {
-      await openCornerEditor(file, corners ? error.message : '');
+      if (!corners && offerCrop) await openCropEditor(file);
+      else await openCornerEditor(file, corners ? error.message : '');
       return;
     }
     showEntryError(error.message || 'The photo could not be scanned. Enter the puzzle manually.');
@@ -99,6 +101,48 @@ async function importPhoto(file, corners = null) {
   } finally {
     button.disabled = false;
   }
+}
+
+async function openCropEditor(file) {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const canvas = document.getElementById('photo-crop-canvas');
+  const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  cropEditor = { file, bitmap, active:-1, rect:{left:.08,top:.08,right:.92,bottom:.92} };
+  drawCropEditor();
+  showOverlay('photo-crop-dialog');
+}
+
+function drawCropEditor() {
+  if (!cropEditor) return;
+  const canvas=document.getElementById('photo-crop-canvas'), context=canvas.getContext('2d');
+  context.drawImage(cropEditor.bitmap,0,0,canvas.width,canvas.height);
+  const {left,top,right,bottom}=cropEditor.rect;
+  const x=left*canvas.width,y=top*canvas.height,w=(right-left)*canvas.width,h=(bottom-top)*canvas.height;
+  context.fillStyle='rgba(0,0,0,.48)';
+  context.fillRect(0,0,canvas.width,y); context.fillRect(0,y,x,h);
+  context.fillRect(x+w,y,canvas.width-x-w,h); context.fillRect(0,y+h,canvas.width,canvas.height-y-h);
+  context.strokeStyle='#00e5ff'; context.lineWidth=Math.max(3,canvas.width/250); context.strokeRect(x,y,w,h);
+  const radius=Math.max(12,canvas.width/50);
+  [[x,y],[x+w,y],[x+w,y+h],[x,y+h]].forEach(([cx,cy])=>{
+    context.fillStyle='#ff3b30';context.beginPath();context.arc(cx,cy,radius,0,Math.PI*2);context.fill();
+  });
+}
+
+function closeCropEditor() {
+  cropEditor?.bitmap.close(); cropEditor=null; hideOverlay();
+}
+
+async function cropPhoto() {
+  const {bitmap,rect}=cropEditor;
+  const sx=rect.left*bitmap.width, sy=rect.top*bitmap.height;
+  const sw=(rect.right-rect.left)*bitmap.width, sh=(rect.bottom-rect.top)*bitmap.height;
+  const scale=Math.min(1,1600/Math.max(sw,sh));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(sw*scale)); canvas.height=Math.max(1,Math.round(sh*scale));
+  canvas.getContext('2d',{alpha:false}).drawImage(bitmap,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Crop failed.')),'image/jpeg',.92));
 }
 
 async function openCornerEditor(file, message = '') {
@@ -371,6 +415,42 @@ function init() {
   });
   photoInput.addEventListener('change', () => {
     if (photoInput.files[0]) importPhoto(photoInput.files[0]);
+  });
+
+  const cropCanvas=document.getElementById('photo-crop-canvas');
+  const cropPoint=event=>{const rect=cropCanvas.getBoundingClientRect();return {
+    x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height};};
+  cropCanvas.addEventListener('pointerdown',event=>{
+    if(!cropEditor)return;
+    const point=cropPoint(event),r=cropEditor.rect;
+    const handles=[{x:r.left,y:r.top},{x:r.right,y:r.top},{x:r.right,y:r.bottom},{x:r.left,y:r.bottom}];
+    cropEditor.active=handles.reduce((best,p,i)=>Math.hypot(p.x-point.x,p.y-point.y)<
+      Math.hypot(handles[best].x-point.x,handles[best].y-point.y)?i:best,0);
+    cropCanvas.setPointerCapture(event.pointerId);
+  });
+  cropCanvas.addEventListener('pointermove',event=>{
+    if(!cropEditor||cropEditor.active<0)return;
+    const p=cropPoint(event),r=cropEditor.rect,min=.08;
+    if(cropEditor.active===0||cropEditor.active===3)r.left=Math.max(0,Math.min(r.right-min,p.x));
+    else r.right=Math.min(1,Math.max(r.left+min,p.x));
+    if(cropEditor.active===0||cropEditor.active===1)r.top=Math.max(0,Math.min(r.bottom-min,p.y));
+    else r.bottom=Math.min(1,Math.max(r.top+min,p.y));
+    drawCropEditor();
+  });
+  const releaseCrop=()=>{if(cropEditor)cropEditor.active=-1;};
+  cropCanvas.addEventListener('pointerup',releaseCrop);
+  cropCanvas.addEventListener('pointercancel',releaseCrop);
+  document.getElementById('photo-crop-cancel').addEventListener('click',()=>{
+    closeCropEditor();
+    document.getElementById('entry-instructions').textContent='Enter the puzzle manually, or try another photo.';
+  });
+  document.getElementById('photo-crop-skip').addEventListener('click',()=>{
+    if(!cropEditor)return; const file=cropEditor.file; closeCropEditor(); openCornerEditor(file);
+  });
+  document.getElementById('photo-crop-confirm').addEventListener('click',async()=>{
+    if(!cropEditor)return;
+    try { const cropped=await cropPhoto(); closeCropEditor(); importPhoto(cropped,null,false); }
+    catch(error) { showEntryError(error.message); }
   });
 
   const cornerCanvas = document.getElementById('photo-corners-canvas');
