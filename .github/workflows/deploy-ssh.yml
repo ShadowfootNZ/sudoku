@@ -30,4 +30,9 @@ jobs:
            css/ \
            js/ \
            icons/ \
+           tools/grid-detector.js \
+           tools/perspective.js \
+           tools/cnn-recognizer.js \
+           tools/mlp-recognizer.js \
+           models/sudoku-digits-cnn-js.json \
            | ssh -i ~/.ssh/deploy_key ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "tar -xzf - -C '${{ secrets.REMOTE_PATH }}'"
