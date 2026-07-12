@@ -533,7 +533,7 @@ html, body {
 
 #entry-btns {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 2fr 2fr;
   gap: 6px;
 }
 
@@ -704,11 +704,26 @@ html, body {
   margin: 0;
 }
 
+.technique-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.technique-group h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--given-color);
+}
+
 .technique-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 8px 0 0;
+  margin: 5px 0 0 16px;
+  padding-left: 10px;
+  border-left: 2px solid var(--mode-bg);
 }
 
 .technique-list dt {

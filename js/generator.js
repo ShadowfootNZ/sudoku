@@ -274,7 +274,7 @@ const findBoxLine = (cands) => {
   return null;
 };
 
-// Naked Pair (Hard): two cells in a unit share the same two candidates
+// Naked Pair (Medium): two cells in a unit share the same two candidates
 const findNakedPair = (cands) => {
   for (const unit of UNITS) {
     const twos = unit.filter(i => cands[i]?.size === 2);
@@ -517,7 +517,7 @@ const findUniqueRectangle = (cands) => {
 // Cascade order = difficulty order; drivers restart from the top after every
 // applied step, so easier techniques always win when applicable.
 const DETECTORS = [
-  findNakedSingle, findHiddenSingle, findPointing, findBoxLine, findNakedPair,
+  findNakedSingle, findHiddenSingle, findNakedPair, findPointing, findBoxLine,
   findHiddenPair, findNakedTriple, findXWing, findSwordfish, findXYWing,
   findUniqueRectangle,
 ];
@@ -525,9 +525,9 @@ const DETECTORS = [
 const TECH_RANK = {
   'naked-single':     GRADE_ORDER.easy,
   'hidden-single':    GRADE_ORDER.medium,
+  'naked-pair':       GRADE_ORDER.medium,
   'pointing':         GRADE_ORDER.hard,
   'box-line':         GRADE_ORDER.hard,
-  'naked-pair':       GRADE_ORDER.hard,
   'hidden-pair':      GRADE_ORDER.hard,
   'naked-triple':     GRADE_ORDER.veryhard,
   'x-wing':           GRADE_ORDER.veryhard,
