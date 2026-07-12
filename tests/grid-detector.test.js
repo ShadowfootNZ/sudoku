@@ -38,6 +38,11 @@ const printedResult = classifyBlank(printedOne);
 assert.equal(printedResult.blank, false);
 assert.ok(printedResult.componentCount >= 1);
 
+// A compact blemish is not a clue even when it is much darker than its background.
+const paperSpeck = grayscaleImage(64, (x, y) =>
+  x >= 30 && x <= 33 && y >= 29 && y <= 33 ? 35 : 220);
+assert.equal(classifyBlank(paperSpeck).blank, true);
+
 // A pale grid is invisible to the dark-pixel threshold but must be found from edges.
 const size = 100;
 const pale = new Uint8ClampedArray(size * size * 4).fill(255);

@@ -149,7 +149,9 @@ export function classifyBlank(imageData) {
     const componentHeight = component.maxY - component.minY + 1;
     const centreX = (component.minX + component.maxX) / 2;
     const centreY = (component.minY + component.maxY) / 2;
-    return component.area >= Math.max(8, width * height * .0025)
+    // Newspaper evaluation found texture specks of 16–22px while the smallest genuine
+    // 64px-cell digit component was 181px. Keep a generous gap below real strokes.
+    return component.area >= Math.max(12, width * height * .025)
       && componentHeight >= height * .18
       && componentWidth >= width * .045
       && centreX > width * .22 && centreX < width * .78

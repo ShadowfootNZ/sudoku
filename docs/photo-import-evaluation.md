@@ -206,3 +206,11 @@ ignores the cell perimeter, and requires a central connected component with digi
 Synthetic tests cover uneven textured paper and a printed stroke. Rerun the complete newspaper
 cohort in the browser harness to measure false-positive blanks and total corrections saved before
 tuning its component thresholds or beginning product integration.
+
+Newspaper evaluation 22 detected every one of 86 true clues and reduced blank false positives to
+14 across three photos. The untouched `IMG_0545` holdout fell from 32 to 8 false positives and from
+about 45 required edits to 22, versus 26 manual entries. Across the cohort the imported grids need
+35 edits instead of 86 manual entries. Three remaining false positives were only 16–22 pixels while
+the smallest real component was 181 pixels, so the minimum component area was safely raised to
+about 2.5% of the cell. Rerun the cohort once more to validate that refinement. Larger false
+positives overlap genuine digits in size and must not be removed with a simple area threshold.
