@@ -190,6 +190,11 @@ it; existing conflict, solution-count, and uniqueness validation remains unchang
 support modules, and model remain outside the service-worker cache. Next slice: connect the manual
 four-corner editor when automatic detection returns the `corners` outcome.
 
+Manual correction is connected. Failed automatic detection opens a responsive canvas with four
+numbered, pointer/touch-draggable markers and a centered-square starting proposal. Corners are kept
+as normalized coordinates, the image remains only in memory, and confirmation reruns perspective
+correction plus OCR. Crossed, collapsed, or out-of-range selections are rejected before scanning.
+
 Delivery decision (2026-07-11): scanner code, OCR runtime/WASM, and model are **on-demand,
 HTTP-cache only**. Keep them out of `sw.js`'s `ASSETS` precache and do not write them to Cache
 Storage, IndexedDB, localStorage, or OPFS. Load the scanner entry module with dynamic `import()`

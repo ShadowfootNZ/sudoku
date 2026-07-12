@@ -729,6 +729,26 @@ html, body {
   color: var(--given-color);
 }
 
+#photo-corners-dialog {
+  max-width: min(92vw, 620px);
+  max-height: 92vh;
+}
+
+#photo-corners-canvas {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  background: #111;
+  border-radius: 8px;
+  touch-action: none;
+}
+
+#photo-corners-error.corner-error {
+  color: var(--error-text);
+  font-size: 13px;
+}
+
 /* ── Settings dialog ────────────────────────────────────────────────────── */
 #settings-dialog {
   max-height: 85vh;

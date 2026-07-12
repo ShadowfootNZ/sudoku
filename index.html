@@ -187,6 +187,16 @@
       <button id="clear-confirm-btn">🧹 Clear all</button>
     </div>
   </div>
+  <div id="photo-corners-dialog" class="dialog hidden">
+    <h2>Position the grid corners</h2>
+    <p>Drag each numbered marker to a corner of the Sudoku grid.</p>
+    <p id="photo-corners-error" class="corner-error" hidden></p>
+    <canvas id="photo-corners-canvas"></canvas>
+    <div class="dialog-btns">
+      <button id="photo-corners-cancel" class="btn-secondary">Cancel</button>
+      <button id="photo-corners-confirm">Scan grid</button>
+    </div>
+  </div>
   <div id="help-dialog" class="dialog hidden">
     <h2>How to Play</h2>
     <div id="help-content">

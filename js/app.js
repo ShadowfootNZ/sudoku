@@ -6,7 +6,7 @@ import {
   buildGrid, renderAll, renderPeersOf, renderEntryAll,
   updateHintsDisplay, updateRevealsDisplay, updateErrorsDisplay,
   updateHintBtn, updateFillBtn, updateHintTechnique, dismissHintTechnique, renderHintStep, updateNumpad, setNotesModeUI,
-  showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, hideOverlay,
+  showLoading, showComplete, showResume, showSettings, showHelp, showClearDialog, showOverlay, hideOverlay,
 } from './ui.js';
 import { initInput, setInputHandlers } from './input.js';
 import { generateGraded, countSolutions, solve, hasConflictingGivens } from './generator.js';
@@ -15,6 +15,7 @@ import { loadPhotoScanner } from './photo-scanner-loader.js';
 let inEntryMode = false;
 let entryGrid   = new Array(81).fill(0);
 let entryReviewCells = new Set();
+let cornerEditor = null;
 
 function updateEntryNumpad() {
   const counts = new Array(10).fill(0);
@@ -73,7 +74,7 @@ function exitEntryMode() {
   updateNumpad();
 }
 
-async function importPhoto(file) {
+async function importPhoto(file, corners = null) {
   const button = document.getElementById('photo-import-btn');
   const instructions = document.getElementById('entry-instructions');
   button.disabled = true;
@@ -81,7 +82,7 @@ async function importPhoto(file) {
   try {
     const scanner = await loadPhotoScanner();
     instructions.textContent = 'Finding the grid and reading digits…';
-    const result = await scanner.scanPhoto(file);
+    const result = await scanner.scanPhoto(file, corners);
     entryGrid = [...result.digits];
     entryReviewCells = new Set(result.reviewCells);
     renderEntryAll(entryGrid, entryReviewCells);
@@ -89,11 +90,60 @@ async function importPhoto(file) {
     instructions.textContent = 'Review every highlighted digit, correct any mistakes, then tap Confirm.';
     document.getElementById('entry-error').hidden = true;
   } catch (error) {
+    if (error.reason === 'corners') {
+      await openCornerEditor(file, corners ? error.message : '');
+      return;
+    }
     showEntryError(error.message || 'The photo could not be scanned. Enter the puzzle manually.');
     instructions.textContent = 'Enter the puzzle manually, or try another photo.';
   } finally {
     button.disabled = false;
   }
+}
+
+async function openCornerEditor(file, message = '') {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const canvas = document.getElementById('photo-corners-canvas');
+  const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  const side = Math.min(canvas.width, canvas.height) * .84;
+  const left = (canvas.width - side) / 2, top = (canvas.height - side) / 2;
+  cornerEditor = {
+    file, bitmap, active: -1,
+    corners: [{x:left/canvas.width,y:top/canvas.height},
+      {x:(left+side)/canvas.width,y:top/canvas.height},
+      {x:(left+side)/canvas.width,y:(top+side)/canvas.height},
+      {x:left/canvas.width,y:(top+side)/canvas.height}],
+  };
+  drawCornerEditor();
+  const error = document.getElementById('photo-corners-error');
+  error.textContent = message;
+  error.hidden = !message;
+  showOverlay('photo-corners-dialog');
+}
+
+function drawCornerEditor() {
+  if (!cornerEditor) return;
+  const canvas = document.getElementById('photo-corners-canvas');
+  const context = canvas.getContext('2d');
+  context.drawImage(cornerEditor.bitmap, 0, 0, canvas.width, canvas.height);
+  const points = cornerEditor.corners.map(p => ({x:p.x*canvas.width,y:p.y*canvas.height}));
+  context.strokeStyle = '#00e5ff'; context.lineWidth = Math.max(3, canvas.width/250);
+  context.beginPath(); points.forEach((p,i)=>i?context.lineTo(p.x,p.y):context.moveTo(p.x,p.y));
+  context.closePath(); context.stroke();
+  const radius = Math.max(13, canvas.width/45);
+  points.forEach((point,index) => {
+    context.fillStyle='#ff3b30'; context.beginPath(); context.arc(point.x,point.y,radius,0,Math.PI*2); context.fill();
+    context.fillStyle='white'; context.font=`600 ${radius}px system-ui`; context.textAlign='center';
+    context.textBaseline='middle'; context.fillText(String(index+1),point.x,point.y);
+  });
+}
+
+function closeCornerEditor() {
+  cornerEditor?.bitmap.close();
+  cornerEditor = null;
+  hideOverlay();
 }
 
 function startNewGame(difficulty) {
@@ -321,6 +371,38 @@ function init() {
   });
   photoInput.addEventListener('change', () => {
     if (photoInput.files[0]) importPhoto(photoInput.files[0]);
+  });
+
+  const cornerCanvas = document.getElementById('photo-corners-canvas');
+  const cornerPoint = event => {
+    const rect = cornerCanvas.getBoundingClientRect();
+    return { x:(event.clientX-rect.left)/rect.width, y:(event.clientY-rect.top)/rect.height };
+  };
+  cornerCanvas.addEventListener('pointerdown', event => {
+    if (!cornerEditor) return;
+    const point=cornerPoint(event);
+    cornerEditor.active=cornerEditor.corners.reduce((best,p,i) =>
+      Math.hypot(p.x-point.x,p.y-point.y)<Math.hypot(cornerEditor.corners[best].x-point.x,cornerEditor.corners[best].y-point.y)?i:best,0);
+    cornerCanvas.setPointerCapture(event.pointerId);
+  });
+  cornerCanvas.addEventListener('pointermove', event => {
+    if (!cornerEditor || cornerEditor.active<0) return;
+    const point=cornerPoint(event);
+    cornerEditor.corners[cornerEditor.active]={x:Math.max(0,Math.min(1,point.x)),y:Math.max(0,Math.min(1,point.y))};
+    drawCornerEditor();
+  });
+  const releaseCorner = () => { if (cornerEditor) cornerEditor.active=-1; };
+  cornerCanvas.addEventListener('pointerup', releaseCorner);
+  cornerCanvas.addEventListener('pointercancel', releaseCorner);
+  document.getElementById('photo-corners-cancel').addEventListener('click', () => {
+    closeCornerEditor();
+    document.getElementById('entry-instructions').textContent = 'Enter the puzzle manually, or try another photo.';
+  });
+  document.getElementById('photo-corners-confirm').addEventListener('click', () => {
+    if (!cornerEditor) return;
+    const {file,corners}=cornerEditor;
+    closeCornerEditor();
+    importPhoto(file,corners);
   });
 
   document.getElementById('notes-btn').addEventListener('click', () => {

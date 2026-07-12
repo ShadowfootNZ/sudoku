@@ -3,7 +3,10 @@ import { warpPerspective } from '../tools/perspective.js';
 import { loadCnnRecognizer } from '../tools/cnn-recognizer.js';
 import { normalizeGlyph } from '../tools/mlp-recognizer.js';
 
-export async function scanPhoto(file) {
+export async function scanPhoto(file, normalizedCorners = null) {
+  if (normalizedCorners && !validCornerSelection(normalizedCorners)) {
+    throw new PhotoScanError('corners', 'Keep the four corners in numbered order around the grid and spread them farther apart.');
+  }
   let bitmap;
   try { bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
   catch (error) { throw new PhotoScanError('decode', 'This image could not be read. Try a JPEG or PNG copy.', error); }
@@ -14,13 +17,38 @@ export async function scanPhoto(file) {
   const context = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
   const source = context.getImageData(0, 0, canvas.width, canvas.height);
-  const boundary = detectGrid(source);
-  if (!boundary) throw new PhotoScanError('corners', 'The grid corners need to be selected manually.');
-  const quality = assessGridQuality(boundary);
+  const boundary = normalizedCorners ? null : detectGrid(source);
+  if (!boundary && !normalizedCorners) throw new PhotoScanError('corners', 'The grid corners need to be selected manually.');
+  const corners = normalizedCorners
+    ? normalizedCorners.map(point => ({ x: point.x * canvas.width, y: point.y * canvas.height }))
+    : [{x:boundary.x,y:boundary.y},{x:boundary.x+boundary.width,y:boundary.y},
+      {x:boundary.x+boundary.width,y:boundary.y+boundary.height},{x:boundary.x,y:boundary.y+boundary.height}];
+  const cornerWidth = Math.max(Math.hypot(corners[1].x-corners[0].x,corners[1].y-corners[0].y),
+    Math.hypot(corners[2].x-corners[3].x,corners[2].y-corners[3].y));
+  const cornerHeight = Math.max(Math.hypot(corners[3].x-corners[0].x,corners[3].y-corners[0].y),
+    Math.hypot(corners[2].x-corners[1].x,corners[2].y-corners[1].y));
+  const quality = assessGridQuality(boundary || { width:cornerWidth, height:cornerHeight });
   if (quality.level === 'reject') throw new PhotoScanError('quality', quality.message);
-  const corners = [{x:boundary.x,y:boundary.y},{x:boundary.x+boundary.width,y:boundary.y},
-    {x:boundary.x+boundary.width,y:boundary.y+boundary.height},{x:boundary.x,y:boundary.y+boundary.height}];
-  return recognizeGrid(warpPerspective(source, corners, 900), { boundary, quality });
+  return recognizeGrid(warpPerspective(source, corners, 900), {
+    boundary: boundary || { method:'manual-perspective', confidence:1 }, quality,
+  });
+}
+
+export function validCornerSelection(corners) {
+  if (!Array.isArray(corners) || corners.length !== 4) return false;
+  if (corners.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y)
+    || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1)) return false;
+  let sign = 0;
+  for (let i=0;i<4;i++) {
+    const a=corners[i], b=corners[(i+1)%4], c=corners[(i+2)%4];
+    const cross=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
+    if (Math.abs(cross)<.001 || (sign && Math.sign(cross)!==sign)) return false;
+    sign=Math.sign(cross);
+  }
+  const area=Math.abs(corners.reduce((sum,p,i) => {
+    const next=corners[(i+1)%4]; return sum+p.x*next.y-next.x*p.y;
+  },0))/2;
+  return area >= .05;
 }
 
 async function recognizeGrid(gridImage, details) {
