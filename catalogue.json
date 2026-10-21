@@ -2,14 +2,78 @@
   "slug": "sudoku",
   "title": "Sudoku",
   "summary": "An installable Sudoku web app with graded puzzles, tutorial-style hints that teach solving techniques, and Apple Pencil Scribble input.",
-  "description": "An offline-capable Sudoku app built for iPad and playable in any browser.\n\n- **Genuinely graded puzzles** — generated client-side and graded by the human techniques required to solve them, so Easy through Very Hard reflect real solving difficulty. A Custom mode lets you key in a puzzle from a newspaper or book and play it with full assistance.\n- **Hints that teach** — each hint names the technique it applies (naked and hidden singles, pointing pairs, box-line reduction, naked and hidden pairs, naked triples, X-Wing, Swordfish, XY-Wing, and unique rectangles), highlighting the pattern cells that justify the move and the candidates being eliminated, with multi-step hints you can step through one inference at a time.\n- **Play aids** — pencil-mark notes with automatic cleanup when related cells are filled, one-tap candidate fill for a cell or the whole board, per-digit remaining counts, undo and redo, and optional highlighting of peers, matching numbers, legal placements, and conflicts.\n- **Flexible input** — enter digits by touch, keyboard, or by writing with an Apple Pencil via Scribble.\n- **Picks up where you left off** — games save automatically and resume, and error, hint, and reveal counts carry through to the completion screen. A service worker keeps the whole app playable offline.",
+  "tagline": "Graded puzzles and teaching hints, designed for iPad.",
+  "description": "An offline-capable Sudoku app built for iPad and playable in any browser.",
+  "features": [
+    {
+      "title": "Genuinely graded puzzles",
+      "description": "Generated in the browser and graded by the human techniques needed to solve them, so Easy through Very Hard reflect solving difficulty."
+    },
+    {
+      "title": "Hints that teach",
+      "description": "Each hint names its solving technique, highlights the relevant cells and candidates, and can step through a multi-stage inference."
+    },
+    {
+      "title": "Play aids",
+      "description": "Pencil marks, automatic candidate cleanup, candidate filling, remaining-digit counts, undo and redo, and optional highlighting."
+    },
+    {
+      "title": "Flexible input",
+      "description": "Enter digits by touch, keyboard, or Apple Pencil Scribble."
+    },
+    {
+      "title": "Newspaper and book puzzles",
+      "description": "Enter a custom puzzle manually or import a photo. Photo recognition runs on the device without uploading the image."
+    },
+    {
+      "title": "Picks up where you left off",
+      "description": "Games save automatically, completion statistics are retained, and the app remains playable offline."
+    }
+  ],
+  "origin": {
+    "title": "Sudoku that feels natural on an iPad.",
+    "body": "I started this after a friend took up Sudoku. He was solving newspaper puzzles in pencil and already used an Apple Pencil for crosswords on his iPad, so it seemed obvious that he should be able to write into a Sudoku grid instead of tapping numbers on a keypad. Getting handwriting to feel ordinary in a browser took more work than I expected. An app I used regularly often had Very Hard puzzles that were easier than its Hard ones, so I graded puzzles by the techniques needed to solve them and built hints that name the technique and step through the reasoning. Later I added custom entry for puzzles from a newspaper or book, then photo import, which reads the puzzle on the device without uploading the image. Sudoku was also what finally got me to create apps.shadowfoot.com."
+  },
   "repoUrl": "https://github.com/ShadowfootNZ/sudoku",
   "appUrl": "https://apps.shadowfoot.com/sudoku/",
+  "links": [
+    {
+      "type": "story",
+      "url": "https://shadowfoot.com/footprint/2026/07/26/why-i-built-a-sudoku-app/",
+      "label": "Read why I built it"
+    }
+  ],
   "deployDir": ".",
-    "thumbnailPath": "docs/thumbnail.webp",
-  "keyImagePath": "docs/sudoku.webp",
-  "imagePaths": ["docs/sudoku-settings.webp", "docs/sudoku-help.webp", "docs/sudoku-tutorial.webp"],
   "entryPoint": "index.html",
-  "tags": ["game"],
+  "media": {
+    "thumbnail": {
+      "path": "catalogue/thumbnail.webp",
+      "alt": "A handwritten Sudoku puzzle in the browser interface"
+    },
+    "key": {
+      "path": "catalogue/sudoku.webp",
+      "alt": "A Sudoku grid with handwritten numbers and input controls"
+    },
+    "screenshots": [
+      {
+        "path": "catalogue/sudoku-settings.webp",
+        "alt": "Sudoku settings for text size, highlighting, errors, hints and tutorial mode",
+        "caption": "Adjust the play aids"
+      },
+      {
+        "path": "catalogue/sudoku-help.webp",
+        "alt": "Sudoku instructions explaining controls and solving techniques",
+        "caption": "Help includes solving techniques"
+      },
+      {
+        "path": "catalogue/sudoku-tutorial.webp",
+        "alt": "A multi-step Sudoku hint highlighting cells and candidates for a Pointing technique",
+        "caption": "Hints explain each inference"
+      }
+    ]
+  },
+  "tags": [
+    "game"
+  ],
   "status": "active"
 }
